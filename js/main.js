@@ -2,7 +2,7 @@
 import { APP, RELEASES, DEFAULT_RELEASE, dataBase, resolveRelease } from './config.js'
 import { validateLines } from './query.js'
 import { readByIds, loadStatic } from './data.js'
-import { prepare, compute, relative, PERIODS_PLOT } from './compute.js'
+import { prepare, compute, relative, PERIODS_PLOT, CENTURIES } from './compute.js'
 import { chronoChart, combinedChart, radarChart, typesOverTimeChart } from './charts.js'
 import { renderTable, esc } from './tables.js'
 import { encodeState, decodeState } from './state.js'
@@ -11,6 +11,8 @@ import { toTSV, saveText, saveBlob, zipFiles, stamp } from './download.js'
 const $ = s => document.querySelector(s)
 const ORDER_NAME = ['unigrams', 'bigrams', 'trigrams']
 const PAGE = 100
+// explicit column order: JavaScript lists integer-like keys ("100", …) before other keys
+const CHRONO_TABLE_COLS = ['search', 'perSearch', 'ngram', 'perNgram', 'perNgramRel', ...CENTURIES.map(String)]
 
 // ---- state -------------------------------------------------------------------------------------------
 const S = {
@@ -203,7 +205,7 @@ async function renderResults() {
     }
     setCaption('#cap-types', cap)
   }
-  renderTable($('#tbl-century'), R.chronoTable, Object.keys(R.chronoTable[0]), { rtl: ['ngram'] })
+  renderTable($('#tbl-century'), R.chronoTable, CHRONO_TABLE_COLS, { rtl: ['ngram'] })
   renderTable($('#tbl-books'), R.booksTable, ['label', 'bookURI', 'URL', 'countTotal', 'countRel', 'tok_length', 'compsFinal', 'compsValue', 'compsPrelim', 'ngramAll'],
     { rtl: ['ngramAll'], render: { URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
   renderTable($('#tbl-authors'), R.authorsTable, ['label', 'authorURI', 'countTotal', 'countRel', 'tokTotal', 'ngramAll'], { rtl: ['ngramAll'] })
@@ -215,7 +217,7 @@ async function renderResults() {
 const TABLES = {
   chronoGraph: R => [R.chronoGraph, ['label', 'ngramAll', ...PERIODS_PLOT.map(String)]],
   chronoGraphRelative: R => [R.relative.map(r => Object.fromEntries([['label', r.label], ...PERIODS_PLOT.map((p, i) => [String(p), r.values[i]])])), ['label', ...PERIODS_PLOT.map(String)]],
-  chronoTable: R => [R.chronoTable, Object.keys(R.chronoTable[0] ?? {})],
+  chronoTable: R => [R.chronoTable, CHRONO_TABLE_COLS],
   booksTable: R => [R.booksTable, ['label', 'bookURI', 'URL', 'countTotal', 'countRel', 'tok_length', 'compsFinal', 'compsValue', 'compsPrelim', 'ngramAll']],
   authorsTable: R => [R.authorsTable, ['label', 'authorURI', 'countTotal', 'countRel', 'tokTotal', 'ngramAll']],
   compsTotalGraph: R => [R.compsTotalGraph, ['label', 'compsFinal', 'ngramCount', 'percentage']],

@@ -49,6 +49,9 @@ export function validateLines(rawLines) {
     if (p.items.length === 0) { errors.push(`Line ${i + 1} has no search item. Write items after the label, each starting with "#", e.g. #Baġdād #[wb]?bgdAd.`); return }
     const bad = p.items.filter(it => orderOfItem(it) > 3)
     if (bad.length) errors.push(`Line ${i + 1}: "${bad[0]}" has ${orderOfItem(bad[0]) - 1} underscores. Use "_" only between the words of a bigram (1 underscore) or trigram (2 underscores).`)
+    // ICU constructs of the R app that JavaScript would accept but read differently: refuse them with an explanation
+    const icu = p.items.find(it => /\\[QE]|\[:[a-z]+:\]/.test(it))
+    if (icu) errors.push(`Line ${i + 1}: "${icu}" uses ${/\\[QE]/.test(icu) ? 'the \\Q…\\E quoting' : 'a POSIX class such as [[:alpha:]]'} of the R version's regular expressions, which this app does not support. Write the characters directly (escape . with \\.), or use [A-Za-z] / \\w for letters.`)
     try { new RegExp(p.regex) } catch (e) {
       errors.push(`Line ${i + 1} is not a valid regular expression: ${p.items.join(' | ')} (${e.message.replace(/^Invalid regular expression: /, '')}). Check brackets and parentheses.`)
     }

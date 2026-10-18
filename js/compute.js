@@ -63,7 +63,7 @@ export function prepare(st) {
   // book links: the book's primary version at the OpenITI release tag (derived/book_links.tsv); otherwise the
   // R app's link (OpenITI GitHub master) when it has one
   const urlOf = new Map()
-  for (const u of st.urls) { const href = /href="([^"]+)"/.exec(u.URL ?? ''); if (href && !urlOf.has(u.bookID)) urlOf.set(u.bookID, href[1]) }
+  for (const u of st.urls) { const href = /href="(https?:[^"]+)"/.exec(u.URL ?? ''); if (href && !urlOf.has(u.bookID)) urlOf.set(u.bookID, href[1]) }   // some R links point to "NA": no link
   const releasePath = new Map(st.bookLinks.filter(l => l.path).map(l => [l.bookURI, l.path]))
   const linkOf = (bookID, bookURI) => releasePath.has(bookURI) ? `https://raw.githubusercontent.com/OpenITI/RELEASE/v${st.release}/${releasePath.get(bookURI)}` : (urlOf.get(bookID) ?? null)
   const modes = {}
