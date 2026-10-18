@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenITI NgramReader — static v1 (stage 1 test page)</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 16px; max-width: 1100px; }
+  pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; background: #f6f6f6; padding: 8px; }
+  #status { font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>OpenITI NgramReader — static v1, stage 1 test page</h1>
+<p>Bare end-to-end test (no design). Query parameters: <code>q</code> = one search line (<code>#Label #item1 #item2</code>),
+<code>mode</code> = <code>clean</code> or <code>all</code>. Example:
+<a href="?q=%23Ba%C4%A1d%C4%81d%20%23%5Bwb%5D%3FbgdAd&amp;mode=clean">#Baġdād #[wb]?bgdAd</a>,
+<a href="?q=%23kataba%20ilayhi%20%23ktb_Alyh&amp;mode=clean">#kataba ilayhi #ktb_Alyh</a>.</p>
+<p id="status">Loading…</p>
+<h2>Timings and transfer</h2>
+<pre id="timings"></pre>
+<h2>Result (JSON)</h2>
+<pre id="out"></pre>
+<script type="module" src="stage1.js"></script>
+</body>
+</html>
