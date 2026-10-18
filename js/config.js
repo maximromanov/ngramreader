@@ -6,8 +6,8 @@ export const RELEASES = {
   '2023.1.8': {
     release: '2023.1.8',                                   // OpenITI release
     repo: 'maximromanov/ngramreader-data-2023.1.8',         // GitHub data repository
-    commit: 'f39467ebfd37c1c41e46007f70acee83ce583e35',     // pinned data commit
-    vocabFormat: 'parquet',                                 // 'text' (derived/vocab_*) or 'parquet' (data/data_*grams2up_HI)
+    commit: '846e5f91f46b5a38fbde66b73dfdc4d6e235bf1c',     // pinned data commit (Parquet data + derived files)
+    vocabFormat: 'text',                                    // 'text' (derived/vocab_*; adopted, faster) or 'parquet' (data/data_*grams2up_HI)
   },
 }
 export const DEFAULT_RELEASE = '2023.1.8'
