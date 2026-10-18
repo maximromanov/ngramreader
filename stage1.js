@@ -3,7 +3,7 @@
 //   query parsing   app.R labelVar/regexVar/unifiedRegex (items OR-ed into \b(...)\b, spaces removed)
 //   per-book rows   getData(): rows of the matched IDs, books of the active corpus only
 //   periods         period = ceiling(AH year / 25) * 25 from the first 4 digits of bookURI; chronoGraph keeps 100..1400
-import { asyncBufferFromUrl, parquetMetadataAsync, parquetReadObjects } from 'https://cdn.jsdelivr.net/npm/hyparquet@1.31.2/+esm'
+import { asyncBufferFromUrl, parquetMetadata, parquetMetadataAsync, parquetReadObjects } from 'https://cdn.jsdelivr.net/npm/hyparquet@1.31.2/+esm'
 import { compressors } from 'https://cdn.jsdelivr.net/npm/hyparquet-compressors@1.1.2/+esm'
 
 const RAW = part => `https://raw.githubusercontent.com/maximromanov/ngramreader-data-${part}/main/`
@@ -41,6 +41,11 @@ async function readTable(url, byteLength, columns) {
   const { file, metadata } = await openFile(url, byteLength)
   return parquetReadObjects({ file, metadata, columns, compressors })
 }
+// whole-file GET: cacheable by the browser (range responses are not cached; measured in stage 1)
+async function readTableWhole(url, columns) {
+  const file = await (await fetch(url)).arrayBuffer()
+  return parquetReadObjects({ file, metadata: parquetMetadata(file), columns, compressors })
+}
 // rows of the requested IDs: only the row groups whose ID min/max can contain one of them are read
 async function readRowsForIds(base, ids) {
   const manifest = await readManifest(base)
@@ -71,6 +76,7 @@ async function run() {
   const params = new URLSearchParams(location.search)
   const line = params.get('q') || '#Baġdād #[wb]?bgdAd'
   const mode = params.get('mode') === 'all' ? 'all' : 'clean'
+  const vocabVia = params.get('vocab') === 'range' ? 'range' : 'get'   // stage 1: compare both routes
   const q = parseLine(line)
   const n = orderOf(q.items)
   const part = `${n}gram`
@@ -81,7 +87,8 @@ async function run() {
   const vocManifest = await readManifest(vocBase)
   mark('vocab_manifest')
   let vocab = []
-  for (const m of vocManifest) vocab = vocab.concat(await readTable(vocBase + m.file, Number(m.bytes), ['ID', 'ngramTR']))
+  for (const m of vocManifest) vocab = vocab.concat(vocabVia === 'get' ? await readTableWhole(vocBase + m.file, ['ID', 'ngramTR'])
+                                                                     : await readTable(vocBase + m.file, Number(m.bytes), ['ID', 'ngramTR']))
   mark('vocab_loaded')
 
   // regex scan
@@ -123,7 +130,7 @@ async function run() {
     transfer[k] ??= { requests: 0, transferSize: 0, encodedBodySize: 0 }
     transfer[k].requests++; transfer[k].transferSize += e.transferSize; transfer[k].encodedBodySize += e.encodedBodySize
   }
-  const result = { line, label: q.label, regex: q.regex, order: n, mode, vocabularySize: vocab.length,
+  const result = { line, label: q.label, regex: q.regex, order: n, mode, vocabVia, vocabularySize: vocab.length,
     matchedIDs: matched.map(r => ({ ID: r.ID, ngramTR: r.ngramTR, ngram: arabic.get(r.ID) })),
     perBookRows: perBook.length, perBook, perPeriod,
     rowGroups: { arabic: [ar.rowGroupsRead, ar.rowGroupsTotal], books: [books.rowGroupsRead, books.rowGroupsTotal] } }
