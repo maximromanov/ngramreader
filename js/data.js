@@ -5,6 +5,20 @@
 //   "Range" header is CORS-safelisted, so no preflight; no other custom headers are ever sent).
 import { LIBS } from './config.js'
 
+// fetch with retries: transient network errors and 5xx responses are retried up to 3 times (0.5 s, 1.5 s back-off)
+export async function fetchRetry(url, init) {
+  let last
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, init)
+      if (res.status < 500) return res
+      last = new Error(`HTTP ${res.status} for ${url}`)
+    } catch (e) { last = e }
+    await new Promise(r => setTimeout(r, attempt === 0 ? 500 : 1500))
+  }
+  throw last
+}
+
 let libsPromise
 export const libs = () => (libsPromise ??= Promise.all([import(LIBS.hyparquet), import(LIBS.compressors)])
   .then(([hp, c]) => ({ ...hp, compressors: c.compressors })))
@@ -14,7 +28,7 @@ const footers = new Map()     // url -> Promise<{ file, metadata, rowStarts }>
 
 export async function readWhole(url, columns) {
   const { parquetMetadata, parquetReadObjects, compressors } = await libs()
-  const res = await fetch(url)
+  const res = await fetchRetry(url)
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`)
   const file = await res.arrayBuffer()
   return parquetReadObjects({ file, metadata: parquetMetadata(file), columns, compressors })
@@ -27,7 +41,7 @@ function manifest(dir) {
 function footer(url, byteLength) {
   if (!footers.has(url)) footers.set(url, (async () => {
     const { asyncBufferFromUrl, parquetMetadataAsync } = await libs()
-    const file = await asyncBufferFromUrl({ url, byteLength })
+    const file = await asyncBufferFromUrl({ url, byteLength, fetch: fetchRetry })
     const metadata = await parquetMetadataAsync(file)
     const rowStarts = []; let r = 0
     for (const rg of metadata.row_groups) { rowStarts.push(r); r += Number(rg.num_rows) }
@@ -82,8 +96,8 @@ export function loadStatic(base) {
       readWhole(base + 'data_BC/metadata_books_urls.parquet'),
       readWhole(base + 'data_BC/main_data.parquet'),
       readWhole(base + 'data_BC/comps_labels.parquet'),
-      fetch(base + 'data_BC/types_final.tsv').then(r => r.text()).then(parseTSV),
-      fetch(base + 'derived/book_links.tsv').then(r => r.text()).then(parseTSV),   // release-pinned book paths
+      fetchRetry(base + 'data_BC/types_final.tsv').then(r => r.text()).then(parseTSV),
+      fetchRetry(base + 'derived/book_links.tsv').then(r => r.text()).then(parseTSV),   // release-pinned book paths
     ])
     return { books, frozen, urls, mainData, compsLabels, typesFinal, bookLinks }
   })())

@@ -3,11 +3,25 @@
 // Messages in:  { cmd: 'load', id, order, base, format }        format: 'text' | 'parquet'
 //               { cmd: 'match', id, order, regex }
 // Messages out: { id, ok, ... } ; progress: { id, progress: { loaded, total } }
+// fetch with retries: transient network errors and 5xx responses are retried up to 3 times (0.5 s, 1.5 s back-off)
+async function fetchRetry(url, init) {
+  let last
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(url, init)
+      if (res.status < 500) return res
+      last = new Error(`HTTP ${res.status} for ${url}`)
+    } catch (e) { last = e }
+    await new Promise(r => setTimeout(r, attempt === 0 ? 500 : 1500))
+  }
+  throw last
+}
+
 const vocab = new Map()        // order -> { tr: string[], all: Int32Array, clean: Int32Array, stats }
 const loading = new Map()      // order -> Promise
 
 async function fetchText(url, id, onBytes) {
-  const res = await fetch(url)                          // plain GET: cacheable by the browser
+  const res = await fetchRetry(url)                     // plain GET: cacheable by the browser
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`)
   const reader = res.body.getReader(); const chunks = []; let n = 0
   for (;;) { const { done, value } = await reader.read(); if (done) break; chunks.push(value); n += value.length; onBytes(value.length) }
@@ -15,7 +29,7 @@ async function fetchText(url, id, onBytes) {
   return new TextDecoder('utf-8').decode(buf)
 }
 async function fetchBuffer(url, onBytes) {
-  const res = await fetch(url)
+  const res = await fetchRetry(url)
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`)
   const reader = res.body.getReader(); const chunks = []; let n = 0
   for (;;) { const { done, value } = await reader.read(); if (done) break; chunks.push(value); n += value.length; onBytes(value.length) }
