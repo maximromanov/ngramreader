@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>NgramReader vocabulary-format test</title></head>
+<body>
+<p>Test page (static v1, Stage 2): loads one order's vocabulary in the Web Worker in the format given by
+<code>?order=2&amp;format=text|parquet&amp;commit=…</code> and reports timings. Not part of the app.</p>
+<pre id="out">running…</pre>
+<script type="module">
+const p = new URLSearchParams(location.search)
+const order = +(p.get('order') || 2), format = p.get('format') || 'text'
+const commit = p.get('commit') || '546e3c6a81cf8e72a0cd51ec94f72fe46414fa64'
+const base = `https://raw.githubusercontent.com/maximromanov/ngramreader-data-2023.1.8/${commit}/`
+const t0 = performance.now()
+const w = new Worker('../js/vocab-worker.js', { type: 'module' })
+w.onmessage = ({ data }) => {
+  if (data.progress) return
+  const res = { order, format, wallMs: Math.round(performance.now() - t0), ...data }
+  if (data.ok) w.postMessage({ cmd: 'match', id: 2, order, regex: order === 1 ? '\\b([wb]?bgdAd)\\b' : order === 2 ? '\\b(ktb_Alyh)\\b' : '\\b(qAl_rswl_Allh)\\b' })
+  w.onmessage = ({ data: m }) => { res.match = { ids: m.ids, ms: m.ms, all: m.all, clean: m.clean }; window.__res = res; document.getElementById('out').textContent = JSON.stringify(res, null, 1) }
+}
+w.postMessage({ cmd: 'load', id: 1, order, base, format })
+</script>
+</body></html>
