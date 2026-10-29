@@ -94,7 +94,7 @@ All are loaded from `cdn.jsdelivr.net` at pinned versions (`js/config.js`):
 
 ## Citation
 
-`[to be updated]` Maxim Romanov. (2023) *ADHFAIS App[endice]s* (OpenITI RELEASE Version 2023.1.8 [CLEAN]). [Software + Data set]. Zenodo: http://doi.org/...
+Romanov, Maxim. (2025). *ADHFAIS APP{ENDIX} 1: OpenITI NgramReader (based on OpenITI, Release ver. 2023.1.8)* (Version 1) [Software]. Zenodo. https://doi.org/10.5281/zenodo.15662942
 
 **Acknowledgements:** Early versions of the NgramReader were developed within the KITAB Project, funded by ERC Consolidator Grant (#772989, 2018–2023); the current version has been developed within the framework of the EIS1600 Project, funded by DFG through the Emmy Noether Programm.
 
