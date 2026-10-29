@@ -23,7 +23,9 @@ const withBookLabels = rows => rows.map(r => { const l = S.labels?.books.get(r.b
 const withAuthorLabels = rows => rows.map(r => { const l = S.labels?.authors.get(r.authorURI)
   return { ...r, Author: l?.authorName ?? r.authorURI, Arabic: l?.authorAR || null } })
 // "*title*" markup -> italics; uncertain labels get a superscript "?"
-const renderBookLabel = (v, r) => esc(v).replace(/\*([^*]+)\*/g, '<i>$1</i>') + (r.labelUncertain ? `<sup class="uncertain" title="${UNCERTAIN}">?</sup>` : '')
+// the label links to the book's profile in the Book Classifier (new tab); the release text link stays in its own column
+const renderBookLabel = (v, r) => `<a href="${APP.classifier}?book=${encodeURIComponent(r.bookURI)}" target="_blank" rel="noopener" title="Book profile in the Book Classifier">${esc(v).replace(/\*([^*]+)\*/g, '<i>$1</i>')}</a>` + (r.labelUncertain ? `<sup class="uncertain" title="${UNCERTAIN}">?</sup>` : '')
+const renderAuthorLabel = (v, r) => `<a href="${APP.classifier}?author=${encodeURIComponent(r.authorURI)}" target="_blank" rel="noopener" title="Author profile in the Book Classifier">${esc(v)}</a>`
 
 // ---- state -------------------------------------------------------------------------------------------
 const S = {
@@ -220,7 +222,7 @@ async function renderResults() {
   renderTable($('#tbl-century'), R.chronoTable, CHRONO_TABLE_COLS, { rtl: ['ngram'] })
   renderTable($('#tbl-books'), withBookLabels(R.booksTable), BOOK_COLS,
     { rtl: ['Arabic', 'ngramAll'], render: { Book: renderBookLabel, URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
-  renderTable($('#tbl-authors'), withAuthorLabels(R.authorsTable), AUTHOR_COLS, { rtl: ['Arabic', 'ngramAll'] })
+  renderTable($('#tbl-authors'), withAuthorLabels(R.authorsTable), AUTHOR_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Author: renderAuthorLabel } })
   renderTable($('#tbl-types'), R.compsTotalGraph, ['label', 'compsFinal', 'ngramCount', 'percentage'])
   $('#sec-century').hidden = !R.chronoTable.length; $('#sec-books').hidden = !R.booksTable.length; $('#sec-authors').hidden = !R.authorsTable.length
 }
