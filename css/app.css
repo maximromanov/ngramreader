@@ -49,6 +49,8 @@ td[dir=rtl] { text-align: right; font-family: "Amiri", "Scheherazade New", "Geez
 .table-scroll { overflow-x: auto; max-width: 100%; }
 .table-scroll td.num, .table-scroll th.num { width: 1%; white-space: nowrap; }
 .table-scroll td:not(.num) { min-width: 9em; overflow-wrap: anywhere; }
+.tbl-filter { font: inherit; font-size: 0.9rem; padding: 4px 8px; margin: 4px 0 6px; width: 100%; max-width: 360px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+sup.uncertain { color: var(--muted); cursor: help; margin-left: 2px; }
 .pager { display: flex; gap: 10px; align-items: center; margin: 6px 0; font-size: 0.9rem; }
 .chart { width: 100%; min-height: 420px; margin-top: 18px; }
 .chart.tall { min-height: 520px; }

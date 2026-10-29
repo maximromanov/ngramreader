@@ -1,7 +1,7 @@
 // OpenITI NgramReader, static v1 — page controller.
 import { APP, RELEASES, DEFAULT_RELEASE, dataBase, resolveRelease } from './config.js'
 import { validateLines } from './query.js'
-import { readByIds, loadStatic } from './data.js'
+import { readByIds, loadStatic, loadLabels } from './data.js'
 import { prepare, compute, relative, PERIODS_PLOT, CENTURIES } from './compute.js'
 import { chronoChart, combinedChart, radarChart, typesOverTimeChart } from './charts.js'
 import { renderTable, esc } from './tables.js'
@@ -13,6 +13,17 @@ const ORDER_NAME = ['unigrams', 'bigrams', 'trigrams']
 const PAGE = 100
 // explicit column order: JavaScript lists integer-like keys ("100", …) before other keys
 const CHRONO_TABLE_COLS = ['search', 'perSearch', 'ngram', 'perNgram', 'perNgramRel', ...CENTURIES.map(String)]
+// books and authors tables with readable working labels (labels/ in the data repository): added for display and
+// download only, the computed tables (S.results) are unchanged. Without a label the URI is shown.
+const BOOK_COLS = ['label', 'Book', 'Arabic', 'bookURI', 'URL', 'countTotal', 'countRel', 'tok_length', 'compsFinal', 'compsValue', 'compsPrelim', 'ngramAll']
+const AUTHOR_COLS = ['label', 'Author', 'Arabic', 'authorURI', 'countTotal', 'countRel', 'tokTotal', 'ngramAll']
+const UNCERTAIN = 'Label uncertain; see URI.'
+const withBookLabels = rows => rows.map(r => { const l = S.labels?.books.get(r.bookURI)
+  return { ...r, Book: l?.label ?? r.bookURI, Arabic: l?.titleAR || null, labelUncertain: l ? Number(l.ambiguous) : null } })
+const withAuthorLabels = rows => rows.map(r => { const l = S.labels?.authors.get(r.authorURI)
+  return { ...r, Author: l?.authorName ?? r.authorURI, Arabic: l?.authorAR || null } })
+// "*title*" markup -> italics; uncertain labels get a superscript "?"
+const renderBookLabel = (v, r) => esc(v).replace(/\*([^*]+)\*/g, '<i>$1</i>') + (r.labelUncertain ? `<sup class="uncertain" title="${UNCERTAIN}">?</sup>` : '')
 
 // ---- state -------------------------------------------------------------------------------------------
 const S = {
@@ -183,6 +194,7 @@ function fileStem() { return `NgramReader_${S.results.lines.map(l => l.userLabel
 
 async function renderResults() {
   const R = S.results; $('#results').hidden = false
+  try { S.labels = await loadLabels(dataBase(S.release)) } catch (e) { S.labels = null; console.warn('labels not loaded:', e) }
   const cap = captionFor(R)
   const series = R.chronoGraph.map(g => ({ label: g.label, userLabel: R.lines.find(l => l.label === g.label).userLabel, values: PERIODS_PLOT.map(p => g[p]) }))
   const rel = R.relative.map(r => ({ ...r, userLabel: R.lines.find(l => l.label === r.label).userLabel }))
@@ -206,9 +218,9 @@ async function renderResults() {
     setCaption('#cap-types', cap)
   }
   renderTable($('#tbl-century'), R.chronoTable, CHRONO_TABLE_COLS, { rtl: ['ngram'] })
-  renderTable($('#tbl-books'), R.booksTable, ['label', 'bookURI', 'URL', 'countTotal', 'countRel', 'tok_length', 'compsFinal', 'compsValue', 'compsPrelim', 'ngramAll'],
-    { rtl: ['ngramAll'], render: { URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
-  renderTable($('#tbl-authors'), R.authorsTable, ['label', 'authorURI', 'countTotal', 'countRel', 'tokTotal', 'ngramAll'], { rtl: ['ngramAll'] })
+  renderTable($('#tbl-books'), withBookLabels(R.booksTable), BOOK_COLS,
+    { rtl: ['Arabic', 'ngramAll'], render: { Book: renderBookLabel, URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
+  renderTable($('#tbl-authors'), withAuthorLabels(R.authorsTable), AUTHOR_COLS, { rtl: ['Arabic', 'ngramAll'] })
   renderTable($('#tbl-types'), R.compsTotalGraph, ['label', 'compsFinal', 'ngramCount', 'percentage'])
   $('#sec-century').hidden = !R.chronoTable.length; $('#sec-books').hidden = !R.booksTable.length; $('#sec-authors').hidden = !R.authorsTable.length
 }
@@ -218,8 +230,8 @@ const TABLES = {
   chronoGraph: R => [R.chronoGraph, ['label', 'ngramAll', ...PERIODS_PLOT.map(String)]],
   chronoGraphRelative: R => [R.relative.map(r => Object.fromEntries([['label', r.label], ...PERIODS_PLOT.map((p, i) => [String(p), r.values[i]])])), ['label', ...PERIODS_PLOT.map(String)]],
   chronoTable: R => [R.chronoTable, CHRONO_TABLE_COLS],
-  booksTable: R => [R.booksTable, ['label', 'bookURI', 'URL', 'countTotal', 'countRel', 'tok_length', 'compsFinal', 'compsValue', 'compsPrelim', 'ngramAll']],
-  authorsTable: R => [R.authorsTable, ['label', 'authorURI', 'countTotal', 'countRel', 'tokTotal', 'ngramAll']],
+  booksTable: R => [withBookLabels(R.booksTable), [...BOOK_COLS.slice(0, 3), 'labelUncertain', ...BOOK_COLS.slice(3)]],
+  authorsTable: R => [withAuthorLabels(R.authorsTable), AUTHOR_COLS],
   compsTotalGraph: R => [R.compsTotalGraph, ['label', 'compsFinal', 'ngramCount', 'percentage']],
   compsPeriodsGraph: R => [R.compsPeriodsGraph, ['label', 'compsFinal', 'order', 'periods', 'freqsNorm']],
   bookData: R => [R.bookData, ['ID', 'label', 'ngramTR', 'ngram', 'count', 'bookURI']],
@@ -229,8 +241,8 @@ const DESCRIPTIONS = {
   chronoGraph: 'per search line, absolute counts per 25-year AH period (columns 100 ... 1400 = period end, AH) and the matched forms (ngramAll).',
   chronoGraphRelative: 'per search line, relative frequencies per period: count / tokens of the selected corpus in that period (unsmoothed).',
   chronoTable: 'per form, counts per century (columns 100 ... 1400 = century end, AH; century 100 includes periods 25-100), with totals per search and per form.',
-  booksTable: 'per search line and book: count, count / book length, book length, book type (compsFinal, compsValue, compsPrelim), matched forms; URL = the text at the OpenITI release.',
-  authorsTable: "per search line and author: count, count / tokTotal (all of the author's books in the selected corpus), matched forms.",
+  booksTable: 'per search line and book: Book = readable title and author (working label, *italics* markup), Arabic = Arabic title, labelUncertain = 1 if the label is uncertain; count, count / book length, book length, book type (compsFinal, compsValue, compsPrelim), matched forms; URL = the text at the OpenITI release.',
+  authorsTable: "per search line and author: Author = readable name (working label), Arabic = Arabic name; count, count / tokTotal (all of the author's books in the selected corpus), matched forms.",
   compsTotalGraph: 'per search line, hits by book type and their share (the radar graph).',
   compsPeriodsGraph: 'per search line, book type and period, counts normalised by the largest period count of the search (book types over time).',
 }
@@ -247,6 +259,8 @@ async function downloadAll() {
     `Page address of this result: ${location.href}`,
     '', 'Search lines and ticked forms:',
     ...R.lines.flatMap(l => { const p = S.previews.find(x => x.line.index === l.index); return [`  ${l.index + 1}. ${p.line.line}`, `     regex: ${l.regex}`, `     ticked forms (${l.ids.length} of ${p.ids.length}): ${l.ids.map(id => p.tr[p.ids.indexOf(id)]).join(', ')}`] }),
+    '', 'Book titles and author names (columns Book, Author, Arabic) are working labels and may contain errors; the URI is authoritative.',
+    `Labels: ${S.release.repo}, commit ${S.release.commit}, labels/ (generated with a language model; without a label the column repeats the URI).`,
     '', 'Files (UTF-8, tab-separated, header row; character fields and column names in double quotes, embedded quotes doubled; NA = not available):',
     ...Object.keys(TABLES).map(n => `  ${n}.tsv: ${DESCRIPTIONS[n]} Columns: ${TABLES[n](R)[1].join(', ')}.`),
   ].join('\n') + '\n'

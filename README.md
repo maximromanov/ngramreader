@@ -13,8 +13,9 @@ This version runs entirely in the browser. It is plain HTML, CSS and JavaScript 
 
 - **Release:** **OpenITI 2023.1.8**.
 - **Data repository:** [`maximromanov/ngramreader-data-2023.1.8`](https://github.com/maximromanov/ngramreader-data-2023.1.8), read through `raw.githubusercontent.com`. The data is the R app's Parquet data, unchanged, plus a few derived files.
-- **Pinned commit:** the app reads one commit of the data repository: **`846e5f91f46b5a38fbde66b73dfdc4d6e235bf1c`**.
+- **Pinned commit:** the app reads one commit of the data repository: **`89acf91172a052cf25e15e8854a509a529bb1c08`** (adds `labels/`; earlier links that carry commit `846e5f9` still work, with URIs in place of labels).
 - **Configuration:** the release, the data repository and the pinned commit are set in one place, `js/config.js` (`RELEASES`, `DEFAULT_RELEASE`). To switch to another release, add its entry there and point `DEFAULT_RELEASE` to it. A later release lives in its own repository, `ngramreader-data-<release>`.
+- **Readable labels:** the books and authors tables show a readable title or author name and the Arabic beside the URI, from `labels/book_labels.tsv` and `labels/author_labels.tsv` in the data repository (shared with the Book Classifier). They are working labels, generated with a language model, and may contain errors; the URI is authoritative. Uncertain labels carry a raised "?". Downloads add the columns `Book`/`Author`, `Arabic` and, for books, `labelUncertain`.
 - **Where it is shown:** the version line at the bottom of the page shows the app commit, the release and the data commit. So does the `README.txt` inside every download.
 
 ## How it works

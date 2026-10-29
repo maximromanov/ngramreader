@@ -107,3 +107,20 @@ function parseTSV(text) {
   const cols = head.split('\t')
   return rows.map(l => Object.fromEntries(l.split('\t').map((v, i) => [cols[i], v])))
 }
+
+// readable working labels (labels/ in the data repository), shared with the Book Classifier; whole-file GETs,
+// browser-cacheable; loaded once per session. Returns { books: Map(bookURI -> row), authors: Map(authorURI -> row) }.
+let labelsData
+export function loadLabels(base) {
+  return (labelsData ??= (async () => {
+    const [books, authors] = await Promise.all(['labels/book_labels.tsv', 'labels/author_labels.tsv'].map(f =>
+      fetchRetry(base + f).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status} for ${base + f}`); return r.text() }).then(parseQuotedTSV)))
+    return { books: new Map(books.map(r => [r.bookURI, r])), authors: new Map(authors.map(r => [r.authorURI, r])) }
+  })())
+}
+// TSV with double-quoted fields and doubled embedded quotes (R write.table(quote = TRUE, qmethod = "double")); NA -> null
+function parseQuotedTSV(text) {
+  const field = v => v === 'NA' ? null : v.length > 1 && v[0] === '"' && v[v.length - 1] === '"' ? v.slice(1, -1).replace(/""/g, '"') : v
+  const [head, ...rows] = text.replace(/\r/g, '').replace(/\n$/, '').split('\n').map(l => l.split('\t').map(field))
+  return rows.map(r => Object.fromEntries(head.map((c, i) => [c, r[i]])))
+}
