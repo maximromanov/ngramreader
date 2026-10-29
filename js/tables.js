@@ -4,6 +4,10 @@ const fmt = v => v === null || v === undefined ? '' : typeof v === 'number'
   ? (Number.isInteger(v) ? v.toLocaleString('en') : (Math.abs(v) < 0.01 && v !== 0 ? v.toExponential(3) : String(+v.toPrecision(6))))
   : String(v)
 
+// viewport width without the vertical scrollbar, for the full-width table areas (.wide in app.css)
+const setPageWidth = () => document.documentElement.style.setProperty('--page-w', document.documentElement.clientWidth + 'px')
+setPageWidth(); addEventListener('resize', setPageWidth)
+
 export function renderTable(container, rows, columns, { pageSize = 25, render = {}, rtl = [] } = {}) {
   let sortCol = null, sortDir = 1, page = 0
   const draw = () => {
@@ -15,7 +19,7 @@ export function renderTable(container, rows, columns, { pageSize = 25, render = 
     const slice = data.slice(page * pageSize, (page + 1) * pageSize)
     container.innerHTML = `
       <div class="table-scroll"><table>
-        <thead><tr>${columns.map(c => `<th data-col="${esc(c)}" class="${sortCol === c ? (sortDir > 0 ? 'asc' : 'desc') : ''}">${esc(c)}</th>`).join('')}</tr></thead>
+        <thead><tr>${columns.map(c => `<th data-col="${esc(c)}" class="${sortCol === c ? (sortDir > 0 ? 'asc' : 'desc') : ''}${typeof rows[0]?.[c] === 'number' ? ' num' : ''}">${esc(c)}</th>`).join('')}</tr></thead>
         <tbody>${slice.map(r => `<tr>${columns.map(c => `<td${rtl.includes(c) ? ' dir="rtl" lang="ar"' : ''}${typeof r[c] === 'number' ? ' class="num"' : ''}>${render[c] ? render[c](r[c], r) : esc(fmt(r[c]))}</td>`).join('')}</tr>`).join('')}</tbody>
       </table></div>
       <div class="pager"><button data-p="prev" ${page === 0 ? 'disabled' : ''}>‹ Previous</button>

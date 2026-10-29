@@ -62,17 +62,17 @@
   <section id="sec-radar"><div class="chart" id="chart-radar"></div><div class="caption" id="cap-radar"></div>
     <h2>Hits by book type</h2>
     <p class="note">Book types from a classifier of the OpenITI texts. A book counts as <i>undefined</i> when no type scores 0.5 or more.</p>
-    <div id="tbl-types"></div><p><button type="button" data-dl="compsTotalGraph">Download (TSV)</button></p></section>
+    <div id="tbl-types" class="wide"></div><p><button type="button" data-dl="compsTotalGraph">Download (TSV)</button></p></section>
   <section id="sec-types"><h2>Book types over time</h2><div id="charts-types"></div><div class="caption" id="cap-types"></div>
     <p><button type="button" data-dl="compsPeriodsGraph">Download (TSV)</button></p></section>
-  <section id="sec-century"><h2>Counts by century, per form</h2><p class="note">Century 100 includes periods 25–100 AH.</p><div id="tbl-century"></div>
+  <section id="sec-century"><h2>Counts by century, per form</h2><p class="note">Century 100 includes periods 25–100 AH.</p><div id="tbl-century" class="wide"></div>
     <p><button type="button" data-dl="chronoTable">Download (TSV)</button></p></section>
   <section id="sec-books"><h2>Counts by book</h2>
     <p class="note"><code>compsPrelim</code> is the highest-scoring book type and <code>compsValue</code> its score; <code>compsFinal</code> is that type, or <i>undefined</i> when the score is below 0.5. Links open the text in the OpenITI release 2023.1.8.</p>
-    <div id="tbl-books"></div><p><button type="button" data-dl="booksTable">Download (TSV)</button></p></section>
+    <div id="tbl-books" class="wide"></div><p><button type="button" data-dl="booksTable">Download (TSV)</button></p></section>
   <section id="sec-authors"><h2>Counts by author</h2>
     <p class="note"><code>countRel</code> divides by all of the author's books in the selected corpus (<code>tokTotal</code>).</p>
-    <div id="tbl-authors"></div><p><button type="button" data-dl="authorsTable">Download (TSV)</button>
+    <div id="tbl-authors" class="wide"></div><p><button type="button" data-dl="authorsTable">Download (TSV)</button>
     <button type="button" data-dl="bookData">Download per-book rows (TSV)</button></p></section>
 </section>
 </main>

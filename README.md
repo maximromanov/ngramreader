@@ -98,4 +98,6 @@ All are loaded from `cdn.jsdelivr.net` at pinned versions (`js/config.js`):
 
 **Acknowledgements:** Early versions of the NgramReader were developed within the KITAB Project, funded by ERC Consolidator Grant (#772989, 2018–2023); the current version has been developed within the framework of the EIS1600 Project, funded by DFG through the Emmy Noether Programm.
 
-No license has been chosen yet.
+## License
+
+The code of this app is released under the MIT License; see [`LICENSE`](LICENSE). The data, in [`ngramreader-data-2023.1.8`](https://github.com/maximromanov/ngramreader-data-2023.1.8), are derived from OpenITI release 2023.1.8 (https://doi.org/10.5281/zenodo.10007820) and are under CC BY-NC-SA 4.0.

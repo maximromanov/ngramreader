@@ -1,10 +1,8 @@
+/* One light page: white everywhere, to match the white plotly charts (no dark-colour variant). */
 :root {
-  --bg: #fbfaf7; --fg: #1d1d1b; --muted: #5d5a54; --line: #dedad2; --accent: #1f3b73; --accent-fg: #fff;
-  --panel: #fff; --warn-bg: #fff6e0; --err-bg: #fdecea; --code: #8a2c18;
-}
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #17181a; --fg: #e8e6e1; --muted: #a9a59c; --line: #34363a; --accent: #8fb0ef; --accent-fg: #0f1520;
-          --panel: #1f2023; --warn-bg: #3a3017; --err-bg: #3d1f1c; --code: #f0a487; }
+  --bg: #ffffff; --fg: #1d1d1b; --muted: #595959; --line: #e2e2e2; --accent: #1f3b73; --accent-fg: #fff;
+  --panel: #ffffff; --warn-bg: #fff6e0; --err-bg: #fdecea; --code: #8a2c18;
+  color-scheme: light;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 Georgia, "Times New Roman", serif; }
@@ -45,7 +43,12 @@ th { cursor: pointer; white-space: nowrap; user-select: none; }
 th.asc::after { content: " ▲"; } th.desc::after { content: " ▼"; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td[dir=rtl] { text-align: right; font-family: "Amiri", "Scheherazade New", "Geeza Pro", "Noto Naskh Arabic", serif; font-size: 1.05rem; }
-.table-scroll { overflow-x: auto; }
+/* Results tables break out of the 1100px column to the full window width (16px side margins); --page-w is the
+   viewport width without the scrollbar, set in tables.js. Wide tables scroll inside .table-scroll, never the page. */
+.wide { width: calc(var(--page-w, 100vw) - 32px); margin-left: calc(50% - var(--page-w, 100vw) / 2 + 16px); }
+.table-scroll { overflow-x: auto; max-width: 100%; }
+.table-scroll td.num, .table-scroll th.num { width: 1%; white-space: nowrap; }
+.table-scroll td:not(.num) { min-width: 9em; overflow-wrap: anywhere; }
 .pager { display: flex; gap: 10px; align-items: center; margin: 6px 0; font-size: 0.9rem; }
 .chart { width: 100%; min-height: 420px; margin-top: 18px; }
 .chart.tall { min-height: 520px; }
