@@ -289,7 +289,7 @@ function init() {
   S.release = st.release ? resolveRelease(st.release) : RELEASES[DEFAULT_RELEASE]
   document.querySelector(`input[name=mode][value=${st.mode}]`).checked = true
   $('#span').value = st.span; $('#span-val').textContent = st.span <= 0.1 ? 'none' : st.span
-  ;(st.lines.length ? st.lines : ['#Baġdād #[wb]?bgdAd']).forEach(l => addLine(l))
+  ;(st.lines.length ? st.lines : ['#al-kutub al-sittaŧ #(\\w+)?lktb_Alsto']).forEach(l => addLine(l))
   $('#add').onclick = () => { addLine(); document.querySelector('#lines .line:last-child input').focus() }
   $('#search').onclick = () => runSearch()
   $('#update').onclick = async () => { if (S.busy) return; S.busy = true; try { await computeAndRender() } finally { S.busy = false; status('') } }
