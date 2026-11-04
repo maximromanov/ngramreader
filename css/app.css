@@ -1,6 +1,6 @@
 /* Shared by the NgramReader and the Book Classifier (copied between the two apps; keep both copies the same). */
 :root { --bg: #ffffff; --fg: #1b1b1b; --muted: #5a5a5a; --line: #e3e3e3; --line2: #cfcfcf; --accent: #1f5f99; --accent-fg: #fff; --soft: #eef3f8; --warn-bg: #fff6e0; --err-bg: #fdecea; --code: #8a2c18;
-  --ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; --serif: Brill, 'Noto Serif', serif; --arabic: 'Noto Naskh Arabic', 'Geeza Pro', serif; --panel-w: 340px; color-scheme: light; }
+  --ui: Brill, 'Noto Serif', serif; --serif: Brill, 'Noto Serif', serif; --arabic: Amiri, 'Geeza Pro', serif; --panel-w: 340px; color-scheme: light; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { overflow-x: clip; }
@@ -80,7 +80,7 @@ th, td { border-bottom: 1px solid var(--line); padding: 4px 8px; text-align: lef
 th { cursor: pointer; white-space: nowrap; user-select: none; font-weight: 600; }
 th.asc::after { content: " ▲"; } th.desc::after { content: " ▼"; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-td[dir=rtl] { text-align: right; font-family: var(--arabic); font-size: 15px; }
+td[dir=rtl] { text-align: right; font-family: var(--arabic); font-size: 17px; }
 .table-scroll { overflow-x: auto; max-width: 100%; }
 .table-scroll td.num, .table-scroll th.num { width: 1%; white-space: nowrap; }
 .table-scroll td:not(.num) { min-width: 9em; overflow-wrap: anywhere; }
@@ -126,7 +126,7 @@ dialog .close { position: sticky; top: 0; float: right; min-height: 30px; width:
 #what { flex: 1 1 340px; min-width: 0; }
 #what h1 { font-family: var(--serif); font-size: 19px; font-weight: 400; margin: 0; overflow-wrap: anywhere; }
 #what .line2 { display: flex; flex-wrap: wrap; gap: 3px 14px; font-size: 13px; color: var(--muted); align-items: baseline; }
-.ar { font-family: var(--arabic); font-size: 15px; color: var(--fg); unicode-bidi: isolate; }
+.ar { font-family: var(--arabic); font-size: 17px; color: var(--fg); unicode-bidi: isolate; }
 #results-list h3 { font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
 #results-list a.hit { display: flex; flex-direction: column; gap: 2px; padding: 6px 9px; border: 1px solid #efefef; border-radius: 6px; text-decoration: none; color: var(--fg); margin-bottom: 4px; overflow-wrap: anywhere; }
 #results-list a.hit.current { background: var(--soft); border-color: #c9d9e8; }

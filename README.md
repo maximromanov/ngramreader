@@ -92,7 +92,7 @@ The LOESS curves agree within about 1e-13. Three deliberate differences remain:
 
 ## Look and fonts
 
-Interface text is IBM Plex Sans, Arabic Noto Naskh Arabic (Google Fonts). Chart text is `Brill`, with `Noto Serif` as the fallback: no web font exists for Brill, so machines without it show Noto Serif. In exported images the text uses the fonts installed on the machine.
+All text, in the interface and the charts, is `Brill`, with `Noto Serif` as the fallback: no web font exists for Brill, so machines without it show Noto Serif. Arabic is Amiri (Google Fonts). In exported images the text uses the fonts installed on the machine.
 
 ## Development
 
