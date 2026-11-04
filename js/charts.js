@@ -26,10 +26,11 @@ export async function overTimeTogether(el, series, { relative, span, corpus, cap
   await plot(el, traces, layout, caption, filename)
 }
 
+const LABEL_LIFT = 9     // panel labels stand this far above their panel, and at the left edge of the title: the first sits where Together has its subtitle
 // Separate: one panel per line, shared time axis; absolute counts as pale bars (left), relative frequency as a line (right)
 export async function overTimeSeparate(el, panels, { span, corpus, caption, filename, aspect }) {
   const n = panels.length, gap = 0.34 / Math.max(n, 2) / (n > 1 ? 1 : 2), h = (1 - gap * (n - 1)) / n
-  const traces = [], layout = { exportPatch: PAPER_TICKS, margin: { l: 84, r: 76, b: 54 }, showlegend: false, hovermode: 'closest', xaxis: timeAxis({ anchor: `y${3 * n - 1}` }), barmode: 'overlay', aspect, aspectScale: n / (1 - gap * (n - 1)), annotations: [] }
+  const traces = [], layout = { exportPatch: PAPER_TICKS, margin: { l: 84, r: 76, b: 54 }, showlegend: false, hovermode: 'closest', xaxis: timeAxis({ anchor: `y${3 * n - 1}` }), barmode: 'overlay', aspect, aspectScale: n / (1 - gap * (n - 1)), subRoom: 1, annotations: [] }
   panels.forEach((p, i) => {
     const top = 1 - i * (h + gap), dom = [top - h, top - (i === 0 ? 0 : 0)], st = styleOf(p.index)
     const a = 3 * i + 1, b = a + 1, c = a + 2, name = k => (k === 1 ? 'yaxis' : `yaxis${k}`), ref = k => (k === 1 ? 'y' : `y${k}`)
@@ -40,7 +41,7 @@ export async function overTimeSeparate(el, panels, { span, corpus, caption, file
     layout[name(a)] = { domain: dom, overlaying: corpus ? ref(c) : undefined, side: 'left', anchor: 'x', rangemode: 'tozero', tickformat: ',.0f', nticks: 5, gridcolor: GRID, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: MUTED }, title: { text: 'absolute', font: { size: 12, color: MUTED } } }
     if (!corpus) delete layout[name(a)].overlaying
     layout[name(b)] = { domain: dom, overlaying: corpus ? ref(c) : ref(a), side: 'right', anchor: 'x', rangemode: 'tozero', tickformat: '.3%', showgrid: false, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: st.color }, title: { text: 'relative', font: { size: 12, color: st.color } } }
-    layout.annotations.push({ text: `<b><i>${p.userLabel}</i></b>  ${p.detail}`, showarrow: false, xref: 'paper', yref: 'paper', x: 0, y: dom[1], xanchor: 'left', yanchor: 'bottom', align: 'left', font: { size: 13, color: st.color } })
+    layout.annotations.push({ text: `<b><i>${p.userLabel}</i></b>  ${p.detail}`, showarrow: false, xref: 'paper', yref: 'paper', x: 0, y: dom[1], xshift: 8 - layout.margin.l, yshift: LABEL_LIFT, xanchor: 'left', yanchor: 'bottom', align: 'left', font: { size: 13, color: st.color } })
   })
   // the time axis sits under the last panel
   const last = 3 * (n - 1) + 1; layout.xaxis.anchor = last === 1 ? 'y' : `y${last}`

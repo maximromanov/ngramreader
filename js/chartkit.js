@@ -64,14 +64,14 @@ function styled(base, cap, { width, k = 1, d = 0 }) {
   const title = wrap(cap.title, perLine(titleSize, 0.52)).map(l => `<b>${l}</b>`)
   const sub = (cap.subtitle ?? []).flatMap(l => wrap(l, perLine(subSize, 0.47))).map(l => `<span style="font-size:${subSize}px;color:${MUTED}">${l}</span>`)
   const foot = [...wrap(cap.note ? `<b>Note:</b> ${cap.note}` : '', perLine(footSize, 0.47)), ...wrap(cap.footer ?? '', perLine(footSize, 0.47))]
-  const lines = title.length + sub.length
+  const lines = title.length + sub.length + (base.subRoom ?? 0)     // subRoom: a line kept free for a label drawn by the chart itself
   const legendRoom = (base.legendRoom === true ? 1 : base.legendRoom || 0) * 26 * k   // rows of a legend above the plot
   const top = Math.ceil(lines * 1.3 * titleSize + 10 * k + legendRoom) + m.t * k, bottomAxes = m.b * k, footH = Math.ceil(foot.length * 1.3 * footSize + 8 * k)
   const L = scaleFonts({ ...base, margin: undefined, annotations: undefined }, k, d)
   const left = m.l * k, note = { showarrow: false, xref: 'paper', yref: 'paper', x: 0, xanchor: 'left', align: 'left', xshift: -left + 8 }
   return { ...L, autosize: false, paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: FONT, size: (SIZE.base + d) * k, color: INK },
     margin: { t: top, r: m.r * k, b: bottomAxes + footH, l: left, pad: 0 },
-    annotations: [...scaleFonts(base.annotations ?? [], k, d).map(a => ({ ...a, text: arabicSpans(a.text, (15 + d) * k) })),
+    annotations: [...scaleFonts(base.annotations ?? [], k, d).map(a => ({ ...a, xshift: (a.xshift ?? 0) * k, yshift: (a.yshift ?? 0) * k, text: arabicSpans(a.text, (15 + d) * k) })),
       { ...note, text: arabicSpans([...title, ...sub].join('<br>'), subSize * 1.2), y: 1, yanchor: 'top', yshift: top - 4, font: { family: FONT, size: titleSize, color: INK } },
       { ...note, text: foot.join('<br>'), y: 0, yanchor: 'top', yshift: -bottomAxes, font: { family: FONT, size: footSize, color: MUTED } }],
   }
