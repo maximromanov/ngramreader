@@ -131,3 +131,51 @@ export function exportBar(host, charts, tsv) {
     for (const el of charts()) await saveChart(el, b.dataset.f, sel.value)
   })
 }
+
+// ---- bars by book type (both apps) -------------------------------------------------------------------------------------
+// One group of bars per type (Together), or one panel per series on a shared type axis (Separate). Colour follows the search
+// line or layer as in the other charts; in a group the bars also differ by fill, so they stay apart in grayscale.
+const FILLS = ['solid', '/', 'light', '.', '\\', 'x', '+', '-']
+const barMarker = (i, plain) => { const st = styleOf(i), f = plain ? 'solid' : FILLS[i % FILLS.length]
+  if (f === 'solid') return { color: st.color, line: { color: st.color, width: 0.5 } }
+  if (f === 'light') return { color: `rgba(${st.rgb},0.25)`, line: { color: st.color, width: 1 } }
+  return { color: '#ffffff', line: { color: st.color, width: 1 }, pattern: { shape: f, fgcolor: st.color, bgcolor: '#ffffff', size: 6, solidity: 0.45 } } }
+export const shortType = t => t.replace(/ \(.*/, '').replace(/[“”]/g, '')
+// ratio scale: bars are log10(value), so they grow left and right from 1 ("as expected"); ticks carry the plain values
+const RATIO_TICKS = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]
+function ratioAxis(values, width) {
+  const lo = Math.min(1, ...values), hi = Math.max(1, ...values), inRange = RATIO_TICKS.filter(t => t >= lo * 0.8 && t <= hi * 1.25)
+  const lead = t => Number((t / 10 ** Math.floor(Math.log10(t) + 1e-9)).toFixed(3))        // 0.05 -> 5, 0.2 -> 2
+  const ticks = inRange.filter(t => t === 1 || (width < 170 ? lead(t) === 1 : width < 340 ? lead(t) !== 2 : true))     // fewer labels on narrow panels
+  return { tickmode: 'array', tickangle: 0, tickvals: ticks.map(Math.log10), ticktext: ticks.map(t => (t === 1 && width >= 170 ? '1×<br>as expected' : `${t}×`)), ...(width < 90 ? { tickfont: { size: 10 } } : {}), range: [Math.log10(lo) - 0.12, Math.log10(hi) + 0.12] }
+}
+function valueAxis(scale, values, width) {
+  const max = Math.max(0, ...values)
+  if (scale === 'ratio') return ratioAxis(values, width)
+  if (scale === 'share') return { tickformat: '.0%', range: [0, (max || 1) * 1.06], nticks: width < 170 ? 3 : 7 }
+  if (scale === 'score') return { tickformat: '.2f', range: [0, (max || 1) * 1.14], nticks: 6 }
+  return { tickformat: ',d', range: [0, (max || 1) * 1.14], ...(max <= 6 ? { dtick: 1 } : { nticks: 7 }) }   // count
+}
+// series: [{ name, index, values, hover, text }], values in the order of types; a null or (ratio) zero value draws no bar
+export async function typeBars(el, { types, series, separate = false, scale = 'share', xTitle = '', caption, filename }) {
+  const n = series.length, cats = types.map(t => (narrow() ? shortType(t) : t)), ratio = scale === 'ratio', cols = separate ? n : 1
+  const shown = series.flatMap(s => s.values).filter(v => v !== null && v !== undefined && (!ratio || v > 0))
+  const margin = { l: narrow() ? 112 : 240, r: separate ? 20 : 34, b: ratio ? 72 : 56 }
+  const gap = separate && n > 1 ? 0.035 : 0, w = (1 - gap * (cols - 1)) / cols, panelW = ((el.clientWidth || 800) - margin.l - margin.r) * w
+  const axis = { ...valueAxis(scale, shown, panelW), zeroline: false, gridcolor: GRID, linecolor: AXIS, fixedrange: true }
+  const room = Math.floor(panelW / 6), fit = t => (panelW < 110 ? t.replace(/>([^<]*)</, (m, x) => `>${x.length > room ? `${x.slice(0, room - 1)}…` : x}<`) : t)   // panel labels on narrow panels
+  const title = ratio && panelW < 170 ? `${xTitle}<br>1× = as expected` : xTitle
+  const yaxis = { type: 'category', categoryorder: 'array', categoryarray: cats, autorange: 'reversed', tickfont: { size: narrow() ? 11 : 12 }, showgrid: false, linecolor: AXIS, fixedrange: true }
+  const layout = { margin, hovermode: 'closest', barmode: 'group', bargap: separate || n === 1 ? 0.3 : 0.22, bargroupgap: 0.04, yaxis, shapes: [], annotations: [],
+    showlegend: !separate && n > 1, legendRoom: !separate && n > 1 ? (narrow() ? Math.ceil(n / 2) : Math.ceil(n / 5)) : 0, legend: { orientation: 'h', x: 0, y: 1, yanchor: 'bottom', font: { size: 13 } },
+    subRoom: separate ? 1 : 0, plotHeight: Math.max(240, types.length * (separate || n === 1 ? 31 : n * 13 + 10)) }
+  const traces = series.map((s, i) => { const k = separate ? i : 0, ref = k ? `x${k + 1}` : 'x', name = k ? `xaxis${k + 1}` : 'xaxis', st = styleOf(s.index)
+    layout[name] = { ...axis, ...(separate ? { domain: [k * (w + gap), k * (w + gap) + w], anchor: 'y' } : {}) }
+    if (ratio) layout.shapes.push(...(separate || i === 0 ? [{ type: 'line', xref: ref, yref: 'paper', x0: 0, x1: 0, y0: 0, y1: 1, layer: 'above', line: { color: INK, width: 1 } }] : []))
+    if (separate) layout.annotations.push({ text: `<b>${fit(s.name)}</b>`, showarrow: false, xref: 'paper', yref: 'paper', x: k * (w + gap), y: 1, yshift: 4, xanchor: 'left', yanchor: 'bottom', align: 'left', font: { size: panelW < 110 ? 11 : 13, color: st.color } })
+    return { type: 'bar', orientation: 'h', name: s.name, xaxis: ref, y: cats, x: s.values.map(v => (ratio ? (v > 0 ? Math.log10(v) : null) : v)), marker: barMarker(s.index, separate || n === 1), customdata: s.hover, hovertemplate: '%{customdata}<extra>%{y}</extra>',
+      ...(s.text ? { text: s.text, textposition: 'outside', cliponaxis: false, textfont: { size: 12, color: INK } } : {}) } })
+  if (separate && n > 1) layout.annotations.push({ text: title, showarrow: false, xref: 'paper', yref: 'paper', x: 0.5, y: 0, yshift: ratio && panelW >= 170 ? -46 : -24, yanchor: 'top', font: { size: 12 } })
+  else layout.xaxis.title = { text: title, font: { size: 12 } }
+  await plot(el, traces, layout, caption, filename)
+}

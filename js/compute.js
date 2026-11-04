@@ -81,6 +81,29 @@ export function prepare(st) {
   return { roll, orderOf, booksClassified, uriOf, linkOf, modes }
 }
 
+// ---- book types compared with the corpus (no R counterpart) ---------------------------------------------------------------
+// tokens of the active corpus per book type, by the rule of booksTable and compsTotalGraph: compsFinal per classification row,
+// so a tied book counts under both of its types, as its hits do
+const compsOf = bc => (bc.index < 0.5 ? '[U] undefined' : bc.comparables)
+export function corpusTypeTokens(P, mode) {
+  const M = P.modes[mode]; if (M.typeTokens) return M.typeTokens
+  const t = new Map(P.roll.map(r => [r.classLabel, 0]))
+  for (const [uri, b] of M.byURI) for (const bc of P.booksClassified.get(uri) ?? [{ comparables: null, index: null }]) t.set(compsOf(bc), (t.get(compsOf(bc)) ?? 0) + b.tok_length)
+  return (M.typeTokens = t)
+}
+// compsTotalGraph rows plus: share (unrounded), corpusTokens, corpusShare, ratio = share / corpusShare (null without tokens)
+export function compsCompared(P, mode, comps) {
+  const tok = corpusTypeTokens(P, mode), all = [...tok.values()].reduce((a, b) => a + b, 0), totals = new Map()
+  for (const r of comps) totals.set(r.label, (totals.get(r.label) ?? 0) + r.ngramCount)
+  return comps.map(r => { const share = totals.get(r.label) ? r.ngramCount / totals.get(r.label) : 0, corpusTokens = tok.get(r.compsFinal) ?? 0, corpusShare = corpusTokens / all
+    return { ...r, share, corpusTokens, corpusShare, ratio: corpusShare > 0 ? share / corpusShare : null } })
+}
+// one order for all panels and measures: combined share across the search lines, largest first
+export function typeOrder(rows) {
+  const sum = new Map(); for (const r of rows) sum.set(r.compsFinal, (sum.get(r.compsFinal) ?? 0) + r.share)
+  return [...sum.keys()].sort((a, b) => sum.get(b) - sum.get(a) || cmp(a, b))
+}
+
 // ---- getData() ------------------------------------------------------------------------------------
 // lines: [{ label, ids (ticked, ascending) }]; rowsById: Map(ID -> [{ bookID, count }] in bookID order);
 // arabic, tr: Map(ID -> string)
@@ -143,7 +166,7 @@ export function compute(lines, rowsById, arabic, tr, P, mode) {
     for (const bc of P.booksClassified.get(g.bookURI) ?? [{ comparables: null, index: null }]) {
       booksTable.push({ label: g.label, bookURI: g.bookURI, URL: P.linkOf(book?.bookID, g.bookURI), countTotal: g.countTotal,
         countRel: signifR(g.countTotal / book.tok_length, 3), tok_length: book.tok_length,
-        compsFinal: bc.index < 0.5 ? '[U] undefined' : bc.comparables, compsValue: bc.index, compsPrelim: bc.comparables,
+        compsFinal: compsOf(bc), compsValue: bc.index, compsPrelim: bc.comparables,
         ngramAll: g.ngrams.join(SEP) })
     }
   }

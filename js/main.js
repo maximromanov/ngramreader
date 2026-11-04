@@ -2,9 +2,9 @@
 import { APP, CITATION, RELEASES, DEFAULT_RELEASE, dataBase, dataCommit, classifierURL, resolveRelease } from './config.js'
 import { validateLines } from './query.js'
 import { readByIds, loadStatic, loadLabels } from './data.js'
-import { prepare, compute, relative, PERIODS_PLOT, CENTURIES } from './compute.js'
+import { prepare, compute, relative, PERIODS_PLOT, CENTURIES, compsCompared, typeOrder } from './compute.js'
 import { overTimeTogether, overTimeSeparate, radarChart, typesOverTimeChart } from './charts.js'
-import { redraw, exportBar, styleOf, arabic } from './chartkit.js'
+import { redraw, exportBar, styleOf, arabic, typeBars, narrow } from './chartkit.js'
 import { panel, tabs, dialogs, citeDialog, copyText, fontControls } from './ui.js'
 import { translitInput } from './translit.js'
 import { packState, unpackState } from './share.js'
@@ -42,7 +42,7 @@ const S = {
   P: null,                   // prepared static data
   results: null,             // last computed tables
   busy: false,
-  view: { value: 'rel', layout: 'together', corpus: true, ratio: '3' },   // switches of the Over time tab
+  view: { value: 'rel', layout: 'together', corpus: true, ratio: '3', tchart: 'bars', tlayout: 'together', tmeasure: 'share' },   // switches of the Over time and Book types tabs
   dirty: new Set(),          // tabs to draw again
 }
 window.__ngr = S             // exposed for automated tests
@@ -256,15 +256,49 @@ async function drawTime() {
     await overTimeTogether(el, relative ? rel : series, { relative, span: R.span, corpus, caption, aspect: aspect(), filename: `${stem}_${relative ? 'relative' : 'absolute'}` })
   }
 }
+// Book types: bars (Together or Separate; share of hits, or compared with the corpus) or the classic radar, with a table
+const typeCode = t => /^\[(.+?)\]/.exec(t)?.[1] ?? t
+const typeName = t => t.replace(/^\[.+?\]\s*/, '')
+const comparedRows = R => (R.compared ??= compsCompared(S.P, R.mode, R.compsTotalGraph))
+const typeLines = R => R.lines.filter(l => R.compsTotalGraph.some(r => r.label === l.label))
+const pct = v => `${(v * 100).toFixed(1)}%`
+async function drawTypes() {
+  const R = S.results, V = S.view, stem = fileStem(), radar = V.tchart === 'radar', vs = !radar && V.tmeasure === 'corpus', lines = typeLines(R)
+  $('#chart-radar').hidden = !radar; $('#chart-typebars').hidden = radar
+  const base = `${corpusLine(R)} Book types from a classifier of the OpenITI texts.`
+  if (radar) await radarChart($('#chart-radar'), R.compsTotalGraph, lines, { filename: `${stem}_booktypes_radar`, caption: { title: 'Distribution of hits over book types (share of hits)', subtitle: searchCaption(R), note: base, footer: footer() } })
+  else {
+    const rows = comparedRows(R), order = typeOrder(rows), at = new Map(rows.map(r => [r.label + '\u0000' + r.compsFinal, r]))
+    const series = lines.map(l => { const rs = order.map(t => at.get(l.label + '\u0000' + t))
+      return { name: labelIt(l), index: l.index, values: rs.map(r => (vs ? r.ratio : r.share)),
+        hover: rs.map(r => `${esc(l.userLabel)}: ${vs ? `${r.ratio === null ? 'n/a' : `${r.ratio.toFixed(2)}×`} (${pct(r.share)} of hits, ${pct(r.corpusShare)} of corpus tokens)` : `${pct(r.share)} of hits (${r.ngramCount.toLocaleString('en')})`}`) } })
+    const ties = ' A book tied between two types counts under both.'
+    await typeBars($('#chart-typebars'), { types: order, series, separate: V.tlayout === 'separate', scale: vs ? 'ratio' : 'share', xTitle: vs ? 'share of hits ÷ share of corpus tokens (log scale)' : 'share of hits',
+      filename: `${stem}_booktypes_${vs ? 'vs_corpus' : 'share'}_${V.tlayout}`,
+      caption: { title: vs ? 'Hits by book type compared with the corpus' : 'Distribution of hits over book types (share of hits)', subtitle: searchCaption(R), footer: footer(),
+        note: `${base}${vs ? ` Each bar: the line's share of hits in the type divided by the type's share of the corpus tokens. At 1× a type has the hits its size predicts; no bar: no hits.${ties}` : ` Types ordered by their combined share across the search lines.${ties}`}` } })
+  }
+  drawTypesTable()
+}
+// wide screens: search lines as rows, types (by code) as columns; phones: the long layout
+function drawTypesTable() {
+  const R = S.results, V = S.view, vs = V.tchart !== 'radar' && V.tmeasure === 'corpus', rows = comparedRows(R), host = $('#tbl-types'), key = $('#types-key')
+  S.typesNarrow = narrow()
+  if (narrow()) { key.innerHTML = ''; renderTable(host, rows, ['label', 'compsFinal', 'ngramCount', 'percentage', ...(vs ? ['corpusShare', 'ratio'] : [])]); return }
+  const order = typeOrder(rows), at = new Map(rows.map(r => [r.label + '\u0000' + r.compsFinal, r]))
+  const cell = r => { const v = vs ? (r.ngramCount ? `${r.ratio.toFixed(2)}×` : '–') : pct(r.share)
+    return `<td class="num" title="${esc(r.compsFinal)}: ${r.ngramCount.toLocaleString('en')} hits, ${pct(r.share)}; corpus ${pct(r.corpusShare)}">${v}</td>` }
+  host.innerHTML = `<div class="table-scroll"><table class="pivot"><thead><tr><th>Search line</th>${order.map(t => `<th class="num" title="${esc(t)}">${esc(typeCode(t))}</th>`).join('')}</tr></thead>
+    <tbody>${typeLines(R).map(l => `<tr><td><i>${esc(l.userLabel)}</i></td>${order.map(t => cell(at.get(l.label + '\u0000' + t))).join('')}</tr>`).join('')}</tbody></table></div>`
+  key.innerHTML = `${vs ? 'Share of hits ÷ share of corpus tokens. ' : 'Share of the line’s hits. '}${order.map(t => `<b>${esc(typeCode(t))}</b> ${esc(typeName(t))}`).join(' · ')}`
+}
+
 async function drawTab(id) {
   if (!S.results || !S.dirty.has(id)) return
   S.dirty.delete(id); const R = S.results, stem = fileStem()
   if (id === 'time') await drawTime()
-  else if (id === 'types') {
-    await radarChart($('#chart-radar'), R.compsTotalGraph, R.lines.filter(l => R.compsTotalGraph.some(r => r.label === l.label)), { filename: `${stem}_booktypes_radar`,
-      caption: { title: 'Distribution of hits over book types (share of hits)', subtitle: searchCaption(R), note: `${corpusLine(R)} Book types from a classifier of the OpenITI texts.`, footer: footer() } })
-    renderTable($('#tbl-types'), R.compsTotalGraph, ['label', 'compsFinal', 'ngramCount', 'percentage'])
-  } else if (id === 'typestime') {
+  else if (id === 'types') await drawTypes()
+  else if (id === 'typestime') {
     const box = $('#charts-types'); box.innerHTML = ''
     const gmax = Math.max(...R.compsPeriodsGraph.map(r => r.freqsNorm))
     for (const l of R.lines.filter(l => R.compsPeriodsGraph.some(r => r.label === l.label && r.freqsNorm > 0))) {
@@ -276,9 +310,9 @@ async function drawTab(id) {
   else if (id === 'books') renderTable($('#tbl-books'), withBookLabels(R.booksTable), BOOK_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Book: renderBookLabel, URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
   else if (id === 'authors') renderTable($('#tbl-authors'), withAuthorLabels(R.authorsTable), AUTHOR_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Author: renderAuthorLabel } })
 }
-const activeCharts = () => [...document.querySelectorAll(`[data-pane="${T.active}"] .js-plotly-plot`)]
+const activeCharts = () => [...document.querySelectorAll(`[data-pane="${T.active}"] .js-plotly-plot:not([hidden])`)]
 let resizeTimer
-function onResize() { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => activeCharts().forEach(el => redraw(el)), 180) }
+function onResize() { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { activeCharts().forEach(el => redraw(el)); if (S.results && T.active === 'types' && S.typesNarrow !== narrow()) drawTypes() }, 180) }
 
 // ---- downloads -----------------------------------------------------------------------------------------
 const TABLES = {
@@ -287,7 +321,7 @@ const TABLES = {
   chronoTable: R => [R.chronoTable, CHRONO_TABLE_COLS],
   booksTable: R => [withBookLabels(R.booksTable), [...BOOK_COLS.slice(0, 3), 'labelUncertain', ...BOOK_COLS.slice(3)]],
   authorsTable: R => [withAuthorLabels(R.authorsTable), AUTHOR_COLS],
-  compsTotalGraph: R => [R.compsTotalGraph, ['label', 'compsFinal', 'ngramCount', 'percentage']],
+  compsTotalGraph: R => [comparedRows(R), ['label', 'compsFinal', 'ngramCount', 'percentage', 'corpusTokens', 'corpusShare', 'ratio']],
   compsPeriodsGraph: R => [R.compsPeriodsGraph, ['label', 'compsFinal', 'order', 'periods', 'freqsNorm']],
   bookData: R => [R.bookData, ['ID', 'label', 'ngramTR', 'ngram', 'count', 'bookURI']],
   corpusSize: R => [PERIODS_PLOT.map(p => ({ period: p, tokens: S.P.modes[R.mode].periodTokens.get(p) ?? 0 })), ['period', 'tokens']],
@@ -300,7 +334,7 @@ const DESCRIPTIONS = {
   chronoTable: 'per form, counts per century (columns 100 ... 1400 = century end, AH; century 100 includes periods 25-100), with totals per search and per form.',
   booksTable: 'per search line and book: Book = readable title and author (working label, *italics* markup), Arabic = Arabic title, labelUncertain = 1 if the label is uncertain; count, count / book length, book length, book type (compsFinal, compsValue, compsPrelim), matched forms; URL = the text at the OpenITI release.',
   authorsTable: "per search line and author: Author = readable name (working label), Arabic = Arabic name; count, count / tokTotal (all of the author's books in the selected corpus), matched forms.",
-  compsTotalGraph: 'per search line, hits by book type and their share (the radar graph).',
+  compsTotalGraph: 'per search line, hits by book type and their share (the bars and the radar); corpusTokens = tokens of the selected corpus in the type (a tied book counts under both of its types, as its hits do), corpusShare = their share of the corpus, ratio = unrounded share of hits / corpusShare (the Compared with corpus view).',
   compsPeriodsGraph: 'per search line, book type and period, counts normalised by the largest period count of the search (book types over time).',
 }
 async function downloadAll() {
@@ -330,11 +364,11 @@ async function downloadAll() {
 // the whole view in the hash (see share.js); defaults are left out. Old ?l=… links are still read (state.js).
 const viewState = () => { const V = S.view, x = {}; S.previews.forEach((p, i) => { if (p.excluded.size) x[i] = [...p.excluded].sort((a, b) => a - b).map(n => n.toString(36)).join('.') })
   return { l: S.previews.map(p => p.line.line), ...(Object.keys(x).length ? { x } : {}), ...(mode() === 'all' ? { m: 'a' } : {}), ...(span() !== 0.2 ? { s: span() } : {}), ...(S.release.release === DEFAULT_RELEASE ? { c: S.release.commit.slice(0, 7) } : { d: `${S.release.release}@${S.release.commit}` }),
-    ...(T.active !== 'time' ? { t: T.active } : {}), ...(V.value !== 'rel' ? { r: 0 } : {}), ...(V.layout !== 'together' ? { p: 1 } : {}), ...(V.corpus ? {} : { k: 0 }), ...(V.ratio !== '3' ? { a: 2 } : {}) } }
+    ...(T.active !== 'time' ? { t: T.active } : {}), ...(V.value !== 'rel' ? { r: 0 } : {}), ...(V.layout !== 'together' ? { p: 1 } : {}), ...(V.corpus ? {} : { k: 0 }), ...(V.ratio !== '3' ? { a: 2 } : {}), ...(V.tchart === 'radar' ? { q: 1 } : {}), ...(V.tlayout === 'separate' ? { y: 1 } : {}), ...(V.tmeasure === 'corpus' ? { e: 1 } : {}) } }
 async function updateURL() { if (S.previews.length) history.replaceState(null, '', location.pathname + await packState(viewState())) }
 function fromPacked(o) {
   const lines = o.l ?? [], excluded = lines.map((_, i) => new Set((o.x?.[i] ?? '').split('.').filter(Boolean).map(t => parseInt(t, 36))))
-  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.k !== 0 && o.c !== 0, ratio: o.a === 2 ? '2' : '3' } }
+  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.k !== 0 && o.c !== 0, ratio: o.a === 2 ? '2' : '3', tchart: o.q ? 'radar' : 'bars', tlayout: o.y ? 'separate' : 'together', tmeasure: o.e ? 'corpus' : 'share' } }
 }
 const citation = () => { const R = S.results, y = new Date().getFullYear()
   return { year: y, title: `Results for ${R.lines.map(l => l.userLabel).join(', ')}`, app: CITATION.title, version: CITATION.version, doi: CITATION.doi, data: CITATION.data,
@@ -356,11 +390,12 @@ const T = tabs($('#tabs'), TAB_LIST, async id => { await updateURL(); await draw
 const UI = panel({ onResize })
 const CITE = citeDialog(citation)
 function switches() {
-  const paint = () => { for (const [host, v] of [['#sw-value', S.view.value], ['#sw-layout', S.view.layout], ['#sw-ratio', S.view.ratio], ['#sw-ratio2', S.view.ratio]]) $(host).querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === v); b.setAttribute('aria-pressed', b.dataset.v === v) }); $('#sw-corpus').checked = S.view.corpus }
-  const apply = async () => { paint(); if (S.results) { await updateURL(); S.dirty.add('time'); S.dirty.add('typestime'); await drawTab(T.active) } }
+  const paint = () => { for (const [host, v] of [['#sw-value', S.view.value], ['#sw-layout', S.view.layout], ['#sw-ratio', S.view.ratio], ['#sw-ratio2', S.view.ratio], ['#sw-tchart', S.view.tchart], ['#sw-tlayout', S.view.tlayout], ['#sw-tmeasure', S.view.tmeasure]]) $(host).querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === v); b.setAttribute('aria-pressed', b.dataset.v === v) }); $('#sw-corpus').checked = S.view.corpus; for (const h of ['#sw-tlayout', '#sw-tmeasure']) $(h).classList.toggle('off', S.view.tchart === 'radar') }
+  const apply = async () => { paint(); if (S.results) { await updateURL(); S.dirty.add('time'); S.dirty.add('types'); S.dirty.add('typestime'); await drawTab(T.active) } }
   for (const h of ['#sw-ratio', '#sw-ratio2']) $(h).onclick = e => { const b = e.target.closest('button'); if (b) { S.view.ratio = b.dataset.v; apply() } }
   $('#sw-value').onclick = e => { const b = e.target.closest('button'); if (b) { S.view.value = b.dataset.v; apply() } }
   $('#sw-layout').onclick = e => { const b = e.target.closest('button'); if (b) { S.view.layout = b.dataset.v; apply() } }
+  for (const [h, k] of [['#sw-tchart', 'tchart'], ['#sw-tlayout', 'tlayout'], ['#sw-tmeasure', 'tmeasure']]) $(h).onclick = e => { const b = e.target.closest('button'); if (b) { S.view[k] = b.dataset.v; apply() } }
   $('#sw-corpus').onchange = () => { S.view.corpus = $('#sw-corpus').checked; apply() }
   paint()
 }
@@ -369,7 +404,7 @@ async function init() {
   const packed = await unpackState(location.hash)
   const st = packed ? fromPacked(packed) : decodeState(location.search)
   S.release = st.release ? resolveRelease(st.release) : RELEASES[DEFAULT_RELEASE]
-  if (st.view) S.view = st.view
+  if (st.view) S.view = { ...S.view, ...st.view }
   document.querySelector(`input[name=mode][value=${st.mode}]`).checked = true
   $('#span').value = st.span; $('#span-val').textContent = st.span <= 0.1 ? 'none' : st.span
   ;(st.lines.length ? st.lines : ['#al-kutub al-sittaŧ #(\\w+)?lktb_Alsto']).forEach(l => addLine(l))
@@ -393,7 +428,7 @@ async function init() {
   $('#span').onchange = async () => { if (S.results) { S.results.span = span(); await updateURL(); S.dirty.add('time'); await drawTab('time') } }
   document.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => { if (S.results) dl(b.dataset.dl) })
   exportBar($('#x-time'), () => [$('#chart-time')], () => { if (S.view.layout === 'separate') { dl('chronoGraph'); dl('chronoGraphRelative') } else dl(S.view.value === 'rel' ? 'chronoGraphRelative' : 'chronoGraph'); dl('corpusSize') })
-  exportBar($('#x-types'), () => [$('#chart-radar')], () => dl('compsTotalGraph'))
+  exportBar($('#x-types'), () => [$(S.view.tchart === 'radar' ? '#chart-radar' : '#chart-typebars')], () => dl('compsTotalGraph'))
   exportBar($('#x-typestime'), () => [...document.querySelectorAll('#charts-types .js-plotly-plot')], () => dl('compsPeriodsGraph'))
   $('#download-all').onclick = downloadAll
   new ResizeObserver(onResize).observe($('#content'))

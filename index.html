@@ -54,11 +54,12 @@
     <div class="chart" id="chart-time"></div>
   </section>
   <section data-pane="types" hidden>
-    <div class="toolbar"><span class="grow"></span><span class="xbar" id="x-types"></span></div>
-    <div class="chart fill" id="chart-radar"></div>
+    <div class="toolbar"><div class="seg" id="sw-tchart" role="group" aria-label="Chart"><button type="button" data-v="bars">Bars</button><button type="button" data-v="radar">Classic (radar)</button></div><div class="seg" id="sw-tlayout" role="group" aria-label="Layout"><button type="button" data-v="together">Together</button><button type="button" data-v="separate">Separate</button></div><div class="seg" id="sw-tmeasure" role="group" aria-label="Measure"><button type="button" data-v="share">Share</button><button type="button" data-v="corpus">Compared with corpus</button></div><span class="grow"></span><span class="xbar" id="x-types"></span></div>
+    <div class="chart" id="chart-typebars"></div>
+    <div class="chart fill" id="chart-radar" hidden></div>
     <h2>Hits by book type</h2>
     <p class="note">Book types from a classifier of the OpenITI texts. A book counts as <i>undefined</i> when no type scores 0.5 or more.</p>
-    <div id="tbl-types"></div><p><button type="button" data-dl="compsTotalGraph">Download (TSV)</button></p>
+    <div id="tbl-types"></div><p class="note" id="types-key"></p><p><button type="button" data-dl="compsTotalGraph">Download (TSV)</button></p>
   </section>
   <section data-pane="typestime" hidden>
     <div class="toolbar"><span>Proportion</span><div class="seg" id="sw-ratio2" role="group" aria-label="Height to width of the plot"><button type="button" data-v="2">1:2</button><button type="button" data-v="3">1:3</button></div><span class="grow"></span><span class="xbar" id="x-typestime"></span></div>
@@ -94,6 +95,8 @@
 <p>Like the <a href="https://books.google.com/ngrams">Google Ngram Viewer</a>, the <b>OpenITI NgramReader</b> charts the frequencies of words and phrases over time, using the OpenITI corpus (8,468 texts; 1,054,622,781 tokens). Unlike it, the NgramReader lets you combine different forms of the same word into one curve — <i>kitāb</i>, <i>al-kitāb</i>, <i>wa-l-kitāb</i> — and build classes of terms, such as <i>Baġdād</i> together with <i>Madīnat al-salām</i>, or all cities of Ḫurāsān. By default, searches run on about 95% of the corpus: 414 texts (61 mln tokens) still contain paraeditorial elements and are left out unless you choose <i>keep all texts (100%)</i>. Time is given in periods of 25 years by the author's death date (AH).</p>
   <h3>Search lines</h3>
   <p>Each line is one curve: <code>#Label #item1 #item2 …</code>. The first <code>#</code> part is the label shown in the legend; the other parts are the items searched for, and their matches are added together. For example, <code>#Baġdād #bgdAd #bbgdAd #wbgdAd #wbbgdAd</code>, or shorter with a regular expression, <code>#Baġdād #[wb]?bgdAd</code>. Add as many lines as you like with <i>+ add line</i>.</p>
+  <h3>Book types</h3>
+  <p>The bars show how the hits of each line divide over the book types: <i>Together</i> in one chart, <i>Separate</i> with a panel per line, always in the same order of types (by combined share). <i>Compared with corpus</i> divides a line's share of hits in a type by the type's share of the tokens of the selected corpus, on a log scale: at 1× a type has the hits its size predicts, to the right more, to the left fewer. The table uses the type codes; hold the pointer on a code for its name. <i>Classic (radar)</i> keeps the earlier chart.</p>
   <h3>Typing labels</h3>
   <p>While you type the label of a line (the first <code>#</code> part), a letter with special forms brings up a small row of them: <code>t</code> offers t, ṭ, ṯ, ŧ; <code>a</code> ā, á, ã; <code>d</code> ḍ, ḏ; <code>g</code> ġ; <code>h</code> ḥ, ḫ; <code>i</code> ī; <code>s</code> ṣ, š; <code>u</code> ū; <code>z</code> ẓ; the apostrophe <code>'</code> ʿ, ʾ. Tap one, or press Tab to step through them, and keep typing. Items, after the second <code>#</code>, are not changed.</p>
   <h3>Transliteration and Arabic input</h3>
