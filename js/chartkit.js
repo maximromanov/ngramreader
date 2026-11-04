@@ -107,7 +107,7 @@ export async function setShapes(el, shapes) { const Plotly = await loadPlotly();
 export async function chartImage(el, format, presetName) {
   const Plotly = await loadPlotly(); const p = PRESETS[presetName] ?? PRESETS.screen
   const width = p.width ?? el.offsetWidth, own = el._kit.layout, patch = own.exportPatch?.[presetName]
-  const base = patch ? { ...own, xaxis: { ...own.xaxis, ...patch.xaxis } } : own     // per-preset axis changes (e.g. fewer labels)
+  const base = patch ? patch(own) : own     // per-preset layout changes (e.g. fewer labels)
   const k = p.k, height = !p.height ? el.offsetHeight : base.exportHeight?.[presetName] ?? (presetName === 'slide' ? p.height : figureHeight(base, el._kit.caption, width, k) ?? p.height)
   const traces = el._kit.traces.map(t => (t.line?.width && k !== 1 ? { ...t, line: { ...t.line, width: t.line.width * k } } : t))
   const L = { ...styled({ ...base, height, fixed: true }, el._kit.caption, { width, k }), width, height, autosize: false }

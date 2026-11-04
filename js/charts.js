@@ -8,7 +8,7 @@ const TICKS = Array.from({ length: 14 }, (_, i) => 100 * (i + 1))
 const timeTicks = step => { const t = TICKS.filter(x => x % step === 0); return { tickvals: t, ticktext: t.map(x => `${x} AH<br>${AH2CE(x)} CE`) } }
 // fewer two-line labels where 14 do not fit: on phones (every 300 years) and in the Paper export (every 200)
 const timeAxis = (extra = {}) => ({ ...timeTicks(narrow() ? 300 : 100), tickmode: 'array', tickangle: 0, showgrid: false, linecolor: AXIS, range: [85, 1415], ...extra })
-const PAPER_TICKS = { paper: { xaxis: timeTicks(200) } }
+const PAPER_TICKS = { paper: L => ({ ...L, xaxis: { ...L.xaxis, ...timeTicks(200) } }) }
 const smoothText = span => (span <= 0.1 ? 'no smoothing' : `LOESS span ${span}`)
 export const axisTitle = (relative, span) => `${relative ? 'relative' : 'absolute'} frequency, ${smoothText(span)}`
 const corpusBars = (tokens, yaxis) => ({ type: 'bar', x: PERIODS_PLOT, y: tokens, yaxis, marker: { color: 'rgba(0,0,0,0.07)' }, width: 21, hovertemplate: '%{x} AH: %{y:,} tokens in the corpus<extra></extra>', showlegend: false })
@@ -26,25 +26,37 @@ export async function overTimeTogether(el, series, { relative, span, corpus, cap
   await plot(el, traces, layout, caption, filename)
 }
 
+// counts axis of a panel: round steps from exactly 0, about `count` of them (Plotly's own ticks here are uneven, and on short panels start at -1)
+const countTicks = (values, count) => { const max = Math.max(0, ...values); if (!max) return [0]
+  const raw = max / count, m = 10 ** Math.floor(Math.log10(raw)), step = Math.max(1, [1, 2, 5, 10].find(s => s * m >= raw) * m)
+  return Array.from({ length: Math.floor(max / step) + 1 }, (_, i) => i * step) }
 const LABEL_LIFT = 9     // panel labels stand this far above their panel, and at the left edge of the title: the first sits where Together has its subtitle
 // Separate: one panel per line, shared time axis; absolute counts as pale bars (left), relative frequency as a line (right)
 export async function overTimeSeparate(el, panels, { span, corpus, caption, filename, aspect }) {
-  const n = panels.length, gap = 0.34 / Math.max(n, 2) / (n > 1 ? 1 : 2), h = (1 - gap * (n - 1)) / n
-  const traces = [], layout = { exportPatch: PAPER_TICKS, margin: { l: 84, r: 76, b: 54 }, showlegend: false, hovermode: 'closest', xaxis: timeAxis({ anchor: `y${3 * n - 1}` }), barmode: 'overlay', aspect, aspectScale: n / (1 - gap * (n - 1)), subRoom: 1, annotations: [] }
+  const n = panels.length, gap = 0.34 / Math.max(n, 2) / (n > 1 ? 1 : 2)
+  const domains = g => { const h = (1 - g * (n - 1)) / n; return panels.map((_, i) => { const top = 1 - i * (h + g); return [top - h, top] }) }
+  const name = k => (k === 1 ? 'yaxis' : `yaxis${k}`), ref = k => (k === 1 ? 'y' : `y${k}`), xName = i => (i ? `xaxis${i + 1}` : 'xaxis'), xRef = i => (i ? `x${i + 1}` : 'x')
+  const xAxes = () => panels.map((_, i) => xName(i))
+  // Paper: fewer labels on every panel. Slide has a fixed height, so its gaps are set from the plot area (about 640 px):
+  // room for the time labels and the panel label up to 3 panels; from 4 panels the time labels stay under the last panel only
+  const paper = L => ({ ...L, ...Object.fromEntries(xAxes().map(x => [x, { ...L[x], ...timeTicks(200) }])) })
+  const slide = L => { const all = n <= 3, dom = domains((all ? 120 : 60) / 640), o = { ...L, annotations: L.annotations.map((a, i) => ({ ...a, y: dom[i][1] })) }
+    panels.forEach((q, i) => { for (const k of [1, 2, 3]) o[name(3 * i + k)] = { ...L[name(3 * i + k)], domain: dom[i] }; if (n > 2) o[name(3 * i + 1)].tickvals = countTicks(q.absolute, 2); if (!all && i < n - 1) o[xName(i)] = { ...L[xName(i)], showticklabels: false } })
+    return o }
+  const traces = [], layout = { exportPatch: { paper, slide }, margin: { l: 84, r: 76, b: 54 }, showlegend: false, hovermode: 'closest', barmode: 'overlay', aspect, aspectScale: n / (1 - gap * (n - 1)), subRoom: 1, annotations: [] }
+  const doms = domains(gap)
   panels.forEach((p, i) => {
-    const top = 1 - i * (h + gap), dom = [top - h, top - (i === 0 ? 0 : 0)], st = styleOf(p.index)
-    const a = 3 * i + 1, b = a + 1, c = a + 2, name = k => (k === 1 ? 'yaxis' : `yaxis${k}`), ref = k => (k === 1 ? 'y' : `y${k}`)
-    if (corpus) traces.push(corpusBars(corpus, ref(c)))
-    traces.push({ type: 'bar', x: PERIODS_PLOT, y: p.absolute, yaxis: ref(a), width: 21, marker: { color: `rgba(${st.rgb},0.24)` }, hovertemplate: `${p.userLabel}: %{y:,} occurrences at %{x} AH<extra></extra>` })
-    traces.push({ type: 'scatter', mode: 'lines', x: PERIODS_PLOT, y: smoothSeries(PERIODS_PLOT, p.relative, span), yaxis: ref(b), line: { color: st.color, dash: st.dash, width: 2.4 }, hovertemplate: `${p.userLabel}: %{y:.4%} at %{x} AH<extra></extra>` })
-    layout[name(c)] = { domain: dom, visible: false, rangemode: 'tozero', fixedrange: true, anchor: 'x' }
-    layout[name(a)] = { domain: dom, overlaying: corpus ? ref(c) : undefined, side: 'left', anchor: 'x', rangemode: 'tozero', tickformat: ',.0f', nticks: 5, gridcolor: GRID, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: MUTED }, title: { text: 'absolute', font: { size: 12, color: MUTED } } }
+    const dom = doms[i], st = styleOf(p.index), a = 3 * i + 1, b = a + 1, c = a + 2, x = xRef(i)
+    layout[xName(i)] = timeAxis({ anchor: ref(a), ...(i ? { matches: 'x' } : {}) })      // every panel has its time labels; zooming one zooms all
+    if (corpus) traces.push({ ...corpusBars(corpus, ref(c)), xaxis: x })
+    traces.push({ type: 'bar', x: PERIODS_PLOT, y: p.absolute, xaxis: x, yaxis: ref(a), width: 21, marker: { color: `rgba(${st.rgb},0.24)` }, hovertemplate: `${p.userLabel}: %{y:,} occurrences at %{x} AH<extra></extra>` })
+    traces.push({ type: 'scatter', mode: 'lines', x: PERIODS_PLOT, y: smoothSeries(PERIODS_PLOT, p.relative, span), xaxis: x, yaxis: ref(b), line: { color: st.color, dash: st.dash, width: 2.4 }, hovertemplate: `${p.userLabel}: %{y:.4%} at %{x} AH<extra></extra>` })
+    layout[name(c)] = { domain: dom, visible: false, rangemode: 'tozero', fixedrange: true, anchor: x }
+    layout[name(a)] = { domain: dom, overlaying: corpus ? ref(c) : undefined, side: 'left', anchor: x, rangemode: 'tozero', tickformat: ',.0f', tickmode: 'array', tickvals: countTicks(p.absolute, 4), gridcolor: GRID, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: MUTED }, title: { text: 'absolute', font: { size: 12, color: MUTED } } }
     if (!corpus) delete layout[name(a)].overlaying
-    layout[name(b)] = { domain: dom, overlaying: corpus ? ref(c) : ref(a), side: 'right', anchor: 'x', rangemode: 'tozero', tickformat: '.3%', showgrid: false, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: st.color }, title: { text: 'relative', font: { size: 12, color: st.color } } }
+    layout[name(b)] = { domain: dom, overlaying: corpus ? ref(c) : ref(a), side: 'right', anchor: x, rangemode: 'tozero', tickformat: '.3%', showgrid: false, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: st.color }, title: { text: 'relative', font: { size: 12, color: st.color } } }
     layout.annotations.push({ text: `<b><i>${p.userLabel}</i></b>  ${p.detail}`, showarrow: false, xref: 'paper', yref: 'paper', x: 0, y: dom[1], xshift: 8 - layout.margin.l, yshift: LABEL_LIFT, xanchor: 'left', yanchor: 'bottom', align: 'left', font: { size: 13, color: st.color } })
   })
-  // the time axis sits under the last panel
-  const last = 3 * (n - 1) + 1; layout.xaxis.anchor = last === 1 ? 'y' : `y${last}`
   await plot(el, traces, layout, caption, filename)
 }
 
