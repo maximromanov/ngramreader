@@ -88,7 +88,8 @@ export async function setShapes(el, shapes) { const Plotly = await loadPlotly();
 // an image of the chart at a preset: the caption is laid out again and all text scaled for that size
 export async function chartImage(el, format, presetName) {
   const Plotly = await loadPlotly(); const p = PRESETS[presetName] ?? PRESETS.screen
-  const width = p.width ?? el.offsetWidth, base = el._kit.layout
+  const width = p.width ?? el.offsetWidth, own = el._kit.layout, patch = own.exportPatch?.[presetName]
+  const base = patch ? { ...own, xaxis: { ...own.xaxis, ...patch.xaxis } } : own     // per-preset axis changes (e.g. fewer labels)
   const height = p.height ? (base.exportHeight?.[presetName] ?? p.height) : el.offsetHeight, k = p.k
   const traces = el._kit.traces.map(t => (t.line?.width && k !== 1 ? { ...t, line: { ...t.line, width: t.line.width * k } } : t))
   const L = { ...styled({ ...base, height, fixed: true }, el._kit.caption, { width, k }), width, height, autosize: false }

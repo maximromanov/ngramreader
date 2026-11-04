@@ -3,8 +3,12 @@ import { PERIODS_PLOT } from './compute.js'
 import { smoothSeries } from './loess.js'
 import { plot, styleOf, narrow, GRID, AXIS, MUTED } from './chartkit.js'
 
+const AH2CE = ah => Math.round(ah - ah / 33 + 622)                       // R app: AH2CE()
 const TICKS = Array.from({ length: 14 }, (_, i) => 100 * (i + 1))
-const timeAxis = (extra = {}) => ({ tickvals: TICKS, ticktext: TICKS.map(String), tickmode: 'array', tickangle: narrow() ? -45 : 0, title: { text: 'Hijri year (AH)', font: { size: 12 } }, showgrid: false, linecolor: AXIS, range: [85, 1415], ...extra })
+const timeTicks = step => { const t = TICKS.filter(x => x % step === 0); return { tickvals: t, ticktext: t.map(x => `${x} AH<br>${AH2CE(x)} CE`) } }
+// fewer two-line labels where 14 do not fit: on phones (every 300 years) and in the Paper export (every 200)
+const timeAxis = (extra = {}) => ({ ...timeTicks(narrow() ? 300 : 100), tickmode: 'array', tickangle: 0, showgrid: false, linecolor: AXIS, range: [85, 1415], ...extra })
+const PAPER_TICKS = { paper: { xaxis: timeTicks(200) } }
 const smoothText = span => (span <= 0.1 ? 'no smoothing' : `LOESS span ${span}`)
 export const axisTitle = (relative, span) => `${relative ? 'relative' : 'absolute'} frequency, ${smoothText(span)}`
 const corpusBars = (tokens, yaxis) => ({ type: 'bar', x: PERIODS_PLOT, y: tokens, yaxis, marker: { color: 'rgba(0,0,0,0.07)' }, width: 21, hovertemplate: '%{x} AH: %{y:,} tokens in the corpus<extra></extra>', showlegend: false })
@@ -17,7 +21,7 @@ export async function overTimeTogether(el, series, { relative, span, corpus, cap
     traces.push({ x: PERIODS_PLOT, y: smoothSeries(PERIODS_PLOT, s.values, span), yaxis: yl, name: s.userLabel, type: 'scatter', mode: 'lines', line: { color: st.color, dash: st.dash, width: 2.4 },
       hovertemplate: `${s.userLabel}: %{y${relative ? ':.4%' : ':,.0f'}} at %{x} AH<extra></extra>` }) })
   const value = { title: { text: axisTitle(relative, span), font: { size: 12 } }, tickformat: relative ? '.3%' : ',', rangemode: 'tozero', gridcolor: GRID, zeroline: false, linecolor: AXIS }
-  const layout = { margin: { l: 72, r: 16, b: narrow() ? 66 : 56 }, showlegend: series.length > 1, legendRoom: series.length > 1 ? (narrow() ? Math.ceil(series.length / 2) : 1) : 0, legend: { orientation: 'h', x: 0, y: 1, yanchor: 'bottom', font: { size: 13 } }, hovermode: 'closest', xaxis: timeAxis(), barmode: 'overlay' }
+  const layout = { exportPatch: PAPER_TICKS, margin: { l: 72, r: 16, b: 54 }, showlegend: series.length > 1, legendRoom: series.length > 1 ? (narrow() ? Math.ceil(series.length / 2) : 1) : 0, legend: { orientation: 'h', x: 0, y: 1, yanchor: 'bottom', font: { size: 13 } }, hovermode: 'closest', xaxis: timeAxis(), barmode: 'overlay' }
   if (corpus) { layout.yaxis = { visible: false, rangemode: 'tozero', fixedrange: true }; layout.yaxis2 = { ...value, overlaying: 'y', side: 'left' } } else layout.yaxis = value
   await plot(el, traces, layout, caption, filename)
 }
@@ -25,7 +29,7 @@ export async function overTimeTogether(el, series, { relative, span, corpus, cap
 // Separate: one panel per line, shared time axis; absolute counts as pale bars (left), relative frequency as a line (right)
 export async function overTimeSeparate(el, panels, { span, corpus, caption, filename, panelHeight }) {
   const n = panels.length, gap = 0.34 / Math.max(n, 2) / (n > 1 ? 1 : 2), h = (1 - gap * (n - 1)) / n
-  const traces = [], layout = { margin: { l: 84, r: 76, b: narrow() ? 66 : 56 }, showlegend: false, hovermode: 'closest', xaxis: timeAxis({ anchor: `y${3 * n - 1}` }), barmode: 'overlay', height: panelHeight, annotations: [],
+  const traces = [], layout = { exportPatch: PAPER_TICKS, margin: { l: 84, r: 76, b: 54 }, showlegend: false, hovermode: 'closest', xaxis: timeAxis({ anchor: `y${3 * n - 1}` }), barmode: 'overlay', height: panelHeight, annotations: [],
     exportHeight: { slide: 900, paper: Math.max(1000, 620 * n) } }
   panels.forEach((p, i) => {
     const top = 1 - i * (h + gap), dom = [top - h, top - (i === 0 ? 0 : 0)], st = styleOf(p.index)
@@ -73,5 +77,5 @@ export async function typesOverTimeChart(el, compsPeriods, L, globalMax, { capti
       fill: 'tonexty', fillcolor: `rgba(${st.rgb},0.45)`, line: { color: st.color, width: 1 }, name: t, showlegend: false, text: rr.map(r => `${t}<br>${r.periods} AH: ${r.freqsNorm.toPrecision(3)}`), hoverinfo: 'text' })
   }
   const ticks = [...new Map(rows.map(r => [r.compsFinal, r.order])).entries()].sort((a, b) => a[1] - b[1])
-  await plot(el, traces, { margin: { l: narrow() ? 90 : 240, r: 16, b: 56 }, height: 560, xaxis: timeAxis(), yaxis: { tickvals: ticks.map(t => t[1]), ticktext: ticks.map(t => (narrow() ? t[0].slice(0, 3) : t[0])), zeroline: false, showgrid: false, fixedrange: true, tickfont: { size: 12 } }, showlegend: false, hovermode: 'closest', exportHeight: { slide: 900, paper: 1100 } }, caption, filename)
+  await plot(el, traces, { exportPatch: PAPER_TICKS, margin: { l: narrow() ? 90 : 240, r: 16, b: 54 }, height: 560, xaxis: timeAxis(), yaxis: { tickvals: ticks.map(t => t[1]), ticktext: ticks.map(t => (narrow() ? t[0].slice(0, 3) : t[0])), zeroline: false, showgrid: false, fixedrange: true, tickfont: { size: 12 } }, showlegend: false, hovermode: 'closest', exportHeight: { slide: 900, paper: 1100 } }, caption, filename)
 }
