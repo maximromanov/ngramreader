@@ -15,7 +15,7 @@ This version runs entirely in the browser. It is plain HTML, CSS and JavaScript 
 - **Top bar**: one chip per search line, the corpus and the release, and *Cite these results* (Chicago, APA, BibTeX, RIS), *Copy link*, *Download all*.
 - **Tabs**: Over time, Book types, Types over time, Centuries, Books, Authors (empty views are greyed out; Map is to come). *Over time* is one chart with the switches Relative/Absolute, Together/Separate (one panel per line: absolute counts as pale bars, relative frequency as a line), Corpus size, and the smoothing.
 - **Charts carry their caption** (title, search, corpus, footer with app, release, data commit, date and link) on screen and in every export: SVG, PNG and TSV, in three sizes (Slide 1600 × 900, Paper about 1000 px wide, As on screen). One style in both apps: `js/chartkit.js`.
-- **Links** hold the whole view, tab and switches included, compactly in the hash (`#v=2&s=…`, deflate + base64url, `js/share.js`). Old `?l=…` links still work, with their `d=` data pin.
+- **Links** hold the whole view, tab and switches included, compactly in the hash (`#2…`, base64url, deflated when that is shorter, `js/share.js`; the data commit in 7 characters, resolved through `pins` in `js/config.js`). Old `?l=…` links still work, with their `d=` data pin.
 
 ## Data source and release
 
@@ -113,7 +113,7 @@ export default { dataBase: 'http://localhost:8001/data/', commit: '<local data c
 
 1. On Zenodo, reserve the DOI of the new version.
 2. In `js/config.js`, set `CITATION.doi` to it (until then the concept DOI, `10.5281/zenodo.15662941`) and `CITATION.version`, `CITATION.year` as needed.
-3. Move the pinned data commit in `js/config.js` if the data changed (same commit as the Book Classifier).
+3. Move the pinned data commit in `js/config.js` if the data changed (same commit as the Book Classifier), and add the old commit to `pins` there so that existing links keep resolving.
 
 ## Libraries
 

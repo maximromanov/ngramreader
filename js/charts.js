@@ -18,7 +18,7 @@ export async function overTimeTogether(el, series, { relative, span, corpus, cap
   const traces = corpus ? [corpusBars(corpus, 'y')] : []
   const yl = corpus ? 'y2' : 'y'
   series.forEach((s, i) => { const st = styleOf(s.index)
-    traces.push({ x: PERIODS_PLOT, y: smoothSeries(PERIODS_PLOT, s.values, span), yaxis: yl, name: s.userLabel, type: 'scatter', mode: 'lines', line: { color: st.color, dash: st.dash, width: 2.4 },
+    traces.push({ x: PERIODS_PLOT, y: smoothSeries(PERIODS_PLOT, s.values, span), yaxis: yl, name: `<i>${s.userLabel}</i>`, type: 'scatter', mode: 'lines', line: { color: st.color, dash: st.dash, width: 2.4 },
       hovertemplate: `${s.userLabel}: %{y${relative ? ':.4%' : ':,.0f'}} at %{x} AH<extra></extra>` }) })
   const value = { title: { text: axisTitle(relative, span), font: { size: 12 } }, tickformat: relative ? '.3%' : ',', rangemode: 'tozero', gridcolor: GRID, zeroline: false, linecolor: AXIS }
   const layout = { exportPatch: PAPER_TICKS, margin: { l: 72, r: 16, b: 54 }, showlegend: series.length > 1, legendRoom: series.length > 1 ? (narrow() ? Math.ceil(series.length / 2) : 1) : 0, legend: { orientation: 'h', x: 0, y: 1, yanchor: 'bottom', font: { size: 13 } }, hovermode: 'closest', xaxis: timeAxis(), barmode: 'overlay' }
@@ -41,7 +41,7 @@ export async function overTimeSeparate(el, panels, { span, corpus, caption, file
     layout[name(a)] = { domain: dom, overlaying: corpus ? ref(c) : undefined, side: 'left', anchor: 'x', rangemode: 'tozero', tickformat: ',.0f', nticks: 5, gridcolor: GRID, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: MUTED }, title: { text: 'absolute', font: { size: 12, color: MUTED } } }
     if (!corpus) delete layout[name(a)].overlaying
     layout[name(b)] = { domain: dom, overlaying: corpus ? ref(c) : ref(a), side: 'right', anchor: 'x', rangemode: 'tozero', tickformat: '.3%', showgrid: false, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: st.color }, title: { text: 'relative', font: { size: 12, color: st.color } } }
-    layout.annotations.push({ text: `<b>${p.userLabel}</b>  <i>${p.detail}</i>`, showarrow: false, xref: 'paper', yref: 'paper', x: 0, y: dom[1], xanchor: 'left', yanchor: 'bottom', align: 'left', font: { size: 13, color: st.color } })
+    layout.annotations.push({ text: `<b><i>${p.userLabel}</i></b>  ${p.detail}`, showarrow: false, xref: 'paper', yref: 'paper', x: 0, y: dom[1], xanchor: 'left', yanchor: 'bottom', align: 'left', font: { size: 13, color: st.color } })
   })
   // the time axis sits under the last panel
   const last = 3 * (n - 1) + 1; layout.xaxis.anchor = last === 1 ? 'y' : `y${last}`
@@ -54,7 +54,7 @@ export async function radarChart(el, compsTotal, lines, { caption, filename }) {
   const byType = (a, b) => (a.compsFinal < b.compsFinal ? -1 : a.compsFinal > b.compsFinal ? 1 : 0)     // code-point order, as in the classifier
   const axis = c => (narrow() ? c.replace(/ /g, '<br>').replace(/-/g, '-<br>') : c)                      // long names wrap on phones
   const layers = lines.map(L => { const rows = compsTotal.filter(r => r.label === L.label).sort(byType), st = styleOf(L.index)
-    return { type: 'scatterpolar', r: rows.map(x => x.percentage), theta: rows.map(x => axis(x.compsFinal)), name: L.userLabel, fill: 'toself', fillcolor: `rgba(${st.rgb},0.3)`,
+    return { type: 'scatterpolar', r: rows.map(x => x.percentage), theta: rows.map(x => axis(x.compsFinal)), name: `<i>${L.userLabel}</i>`, fill: 'toself', fillcolor: `rgba(${st.rgb},0.3)`,
       line: { color: st.color, dash: st.dash, width: 2 }, marker: { color: st.color, size: 6 }, mode: 'lines+markers', hovertemplate: `%{theta}: %{r:.4f}<extra>${L.userLabel}</extra>` } }).filter(t => t.r.length > 1)
   const theta = layers[0]?.theta ?? []
   await plot(el, [ring(theta, 0.8, 0.2), ring(theta, 0.6, 0.4), ring(theta, 0.4, 0.6), ...layers], {

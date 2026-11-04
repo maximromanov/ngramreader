@@ -7,6 +7,7 @@ export const RELEASES = {
     release: '2023.1.8',                                   // OpenITI release
     repo: 'maximromanov/ngramreader-data-2023.1.8',         // GitHub data repository
     commit: '8c89e50e2a646530f05c33a12055268e864d75d0',     // pinned data commit (Parquet data + derived files + labels + classifier/; same as the Book Classifier)
+    pins: ['846e5f91f46b5a38fbde66b73dfdc4d6e235bf1c', '89acf91172a052cf25e15e8854a509a529bb1c08'],   // earlier pins: links keep a 7-character commit, resolved here (add the old pin when moving commit)
     vocabFormat: 'text',                                    // 'text' (derived/vocab_*; adopted, faster) or 'parquet' (data/data_*grams2up_HI)
   },
 }
@@ -51,5 +52,5 @@ export function resolveRelease(token) {
   return commit && /^[0-9a-f]{7,40}$/.test(commit) ? { ...base, commit: commit.length === 40 ? commit : expandCommit(base, commit) } : base
 }
 function expandCommit(base, short) {
-  return base.commit.startsWith(short) ? base.commit : short   // raw.githubusercontent.com accepts full hashes; short ones only if they resolve
+  return [base.commit, ...(base.pins ?? [])].find(c => c.startsWith(short)) ?? short   // raw.githubusercontent.com accepts full hashes; short ones only if they resolve
 }

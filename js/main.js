@@ -4,7 +4,7 @@ import { validateLines } from './query.js'
 import { readByIds, loadStatic, loadLabels } from './data.js'
 import { prepare, compute, relative, PERIODS_PLOT, CENTURIES } from './compute.js'
 import { overTimeTogether, overTimeSeparate, radarChart, typesOverTimeChart } from './charts.js'
-import { redraw, exportBar, styleOf } from './chartkit.js'
+import { redraw, exportBar, styleOf, arabic } from './chartkit.js'
 import { panel, tabs, dialogs, citeDialog, copyText } from './ui.js'
 import { packState, unpackState } from './share.js'
 import { renderTable, esc } from './tables.js'
@@ -199,16 +199,19 @@ function fileStem() { return `NgramReader_${S.results.lines.map(l => l.userLabel
 const today = () => new Date().toISOString().slice(0, 10)
 const modeText = m => (m === 'all' ? 'All texts (100%)' : 'Texts without problematic ones (~95%)')
 const formsOf = l => { const p = S.previews.find(x => x.line.index === l.index); return { p, forms: l.ids.map(id => p.tr[p.ids.indexOf(id)]) } }
-const shortForms = forms => (forms.length > 4 ? `${forms.slice(0, 4).join(', ')} and ${(forms.length - 4).toLocaleString('en')} more` : forms.join(', '))
 const typed = r => r.replace(/^\\b\(/, '').replace(/\)\\b$/, '')   // the search as typed, without the \\b(…)\\b the app adds
-const lineDetail = l => { const { p, forms } = formsOf(l); return `${typed(l.regex)} · ${forms.length.toLocaleString('en')} of ${p.ids.length.toLocaleString('en')} forms: ${shortForms(forms)}` }
+const shortForms = forms => (forms.length > 4 ? `${forms.slice(0, 4).join(', ')} and ${(forms.length - 4).toLocaleString('en')} more` : forms.join(', '))
+// regex as typed; the found forms in Arabic script (first few; the full list is in the TSV and the zip README)
+const lineDetail = l => { const { p, forms } = formsOf(l), ar = l.ids.map((id, i) => (p.ar.get(id) ? arabic(p.ar.get(id)) : forms[i]))
+  return `${typed(l.regex)} · ${forms.length.toLocaleString('en')} of ${p.ids.length.toLocaleString('en')} forms: ${shortForms(ar)}` }
+const labelIt = l => `<i>${esc(l.userLabel)}</i>`
 function searchCaption(R) {
-  const shown = R.lines.slice(0, 6).map(l => `${l.userLabel}: ${lineDetail(l)}`)
+  const shown = R.lines.slice(0, 6).map(l => `${labelIt(l)}: ${lineDetail(l)}`)
   if (R.lines.length > 6) shown.push(`and ${R.lines.length - 6} more lines (all in the TSV and the zip README)`)
   return shown
 }
 const corpusLine = R => `${modeText(R.mode)}: ${S.P.modes[R.mode].nBooks.toLocaleString('en')} texts, ${S.P.modes[R.mode].tokens.toLocaleString('en')} tokens. 25-year periods by the author's death date.`
-const footer = () => `${APP.name} · OpenITI ${S.release.release} · data ${dataCommit(S.release).slice(0, 7)} · ${today()} · ${location.href}`
+const footer = () => `<b>SOURCE:</b> ${APP.name} • OpenITI ${S.release.release} • data ${dataCommit(S.release).slice(0, 7)} • ${today()} • <b>LINK:</b> ${location.href}`
 
 function renderChips(R) {
   $('#chips').innerHTML = R.lines.map(l => { const { p, forms } = formsOf(l), st = styleOf(l.index)
@@ -241,7 +244,7 @@ async function drawTime() {
   $('#sw-value').classList.toggle('off', separate)
   const relative = V.value === 'rel'
   const caption = { title: separate ? 'Absolute counts and relative frequency, by search line' : relative ? 'Relative frequency over time' : 'Absolute counts over time',
-    subtitle: [...(separate ? [] : searchCaption(R)), `${corpusLine(R)} ${separate ? `Bars: occurrences per period (left axis); line: relative frequency, ${smooth} (right axis); each panel has its own scale.` : relative ? `Occurrences divided by the corpus tokens of the period; ${smooth}.` : `Occurrences per period; ${smooth}.`}${bars}`], footer: footer() }
+    subtitle: separate ? [] : searchCaption(R), note: `${corpusLine(R)} ${separate ? `Bars: occurrences per period (left axis); line: relative frequency, ${smooth} (right axis); each panel has its own scale.` : relative ? `Occurrences divided by the corpus tokens of the period; ${smooth}.` : `Occurrences per period; ${smooth}.`}${bars}`, footer: footer() }
   if (separate) {
     const panels = series.map((s, i) => ({ ...s, absolute: s.values, relative: rel[i].values, detail: lineDetail(R.lines.find(x => x.label === s.label)) }))
     el.classList.remove('fill'); el.style.height = `${250 + 250 * panels.length}px`
@@ -257,7 +260,7 @@ async function drawTab(id) {
   if (id === 'time') await drawTime()
   else if (id === 'types') {
     await radarChart($('#chart-radar'), R.compsTotalGraph, R.lines.filter(l => R.compsTotalGraph.some(r => r.label === l.label)), { filename: `${stem}_booktypes_radar`,
-      caption: { title: 'Distribution of hits over book types (share of hits)', subtitle: [...searchCaption(R), `${corpusLine(R)} Book types from a classifier of the OpenITI texts.`], footer: footer() } })
+      caption: { title: 'Distribution of hits over book types (share of hits)', subtitle: searchCaption(R), note: `${corpusLine(R)} Book types from a classifier of the OpenITI texts.`, footer: footer() } })
     renderTable($('#tbl-types'), R.compsTotalGraph, ['label', 'compsFinal', 'ngramCount', 'percentage'])
   } else if (id === 'typestime') {
     const box = $('#charts-types'); box.innerHTML = ''
@@ -265,7 +268,7 @@ async function drawTab(id) {
     for (const l of R.lines.filter(l => R.compsPeriodsGraph.some(r => r.label === l.label && r.freqsNorm > 0))) {
       const d = document.createElement('div'); d.className = 'chart tall'; box.appendChild(d)
       await typesOverTimeChart(d, R.compsPeriodsGraph, l, gmax, { filename: `${stem}_booktypes_over_time_${l.index + 1}`,
-        caption: { title: `Book types over time: ${esc(l.userLabel)}`, subtitle: [`${l.userLabel}: ${lineDetail(l)}`, `${corpusLine(R)} Height: hits per period and type, relative to the largest value of the search.`], footer: footer() } })
+        caption: { title: `Book types over time: ${labelIt(l)}`, subtitle: [`${labelIt(l)}: ${lineDetail(l)}`], note: `${corpusLine(R)} Height: hits per period and type, relative to the largest value of the search.`, footer: footer() } })
     }
   } else if (id === 'century') renderTable($('#tbl-century'), R.chronoTable, CHRONO_TABLE_COLS, { rtl: ['ngram'] })
   else if (id === 'books') renderTable($('#tbl-books'), withBookLabels(R.booksTable), BOOK_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Book: renderBookLabel, URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
@@ -322,14 +325,14 @@ async function downloadAll() {
 }
 
 // ---- URL state, citation and version line ------------------------------------------------------------------------
-// the whole view in the hash (#v=2&s=…, see share.js); defaults are left out. Old ?l=… links are still read (state.js).
+// the whole view in the hash (see share.js); defaults are left out. Old ?l=… links are still read (state.js).
 const viewState = () => { const V = S.view, x = {}; S.previews.forEach((p, i) => { if (p.excluded.size) x[i] = [...p.excluded].sort((a, b) => a - b).map(n => n.toString(36)).join('.') })
-  return { l: S.previews.map(p => p.line.line), ...(Object.keys(x).length ? { x } : {}), ...(mode() === 'all' ? { m: 'a' } : {}), ...(span() !== 0.2 ? { s: span() } : {}), d: `${S.release.release}@${S.release.commit}`,
+  return { l: S.previews.map(p => p.line.line), ...(Object.keys(x).length ? { x } : {}), ...(mode() === 'all' ? { m: 'a' } : {}), ...(span() !== 0.2 ? { s: span() } : {}), ...(S.release.release === DEFAULT_RELEASE ? { c: S.release.commit.slice(0, 7) } : { d: `${S.release.release}@${S.release.commit}` }),
     ...(T.active !== 'time' ? { t: T.active } : {}), ...(V.value !== 'rel' ? { r: 0 } : {}), ...(V.layout !== 'together' ? { p: 1 } : {}), ...(V.corpus ? {} : { c: 0 }) } }
 async function updateURL() { if (S.previews.length) history.replaceState(null, '', location.pathname + await packState(viewState())) }
 function fromPacked(o) {
   const lines = o.l ?? [], excluded = lines.map((_, i) => new Set((o.x?.[i] ?? '').split('.').filter(Boolean).map(t => parseInt(t, 36))))
-  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d, tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.c !== 0 } }
+  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.c !== 0 } }
 }
 const citation = () => { const R = S.results, y = new Date().getFullYear()
   return { year: y, title: `Results for ${R.lines.map(l => l.userLabel).join(', ')}`, app: CITATION.title, version: CITATION.version, doi: CITATION.doi, data: CITATION.data,

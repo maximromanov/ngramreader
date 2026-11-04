@@ -34,12 +34,16 @@ export const PRESETS = {
 }
 export const narrow = () => innerWidth < 600
 
-// wrap a line (may contain <i>…</i>) to at most n visible characters per line; an open <i> is closed and reopened
+// Arabic inside a caption: marked here, set in Amiri when the caption is laid out (spaces stay, so a form never breaks)
+export const arabic = s => `\uE000${s.replace(/ /g, '\u00A0')}\uE001`
+const arabicSpans = (t, px) => t.replace(/\uE000/g, `<span style="font-family:Amiri,'Geeza Pro',serif;font-size:${px}px">`).replace(/\uE001/g, '</span>')
+
+// wrap a line (may contain <i>…</i>, <b>…</b>) to at most n visible characters per line; an open <i> is closed and reopened
 function wrap(line, n) {
   const out = []; let cur = '', len = 0, open = false
   const words = line.split(' ').flatMap(w => (w.length > n ? w.match(new RegExp(`.{1,${n}}`, 'g')) : [w]))   // long links are cut
   for (const w of words) {
-    const vis = w.replace(/<\/?i>/g, '').length
+    const vis = w.replace(/<\/?[ib]>|[\uE000\uE001]/g, '').length
     if (len && len + 1 + vis > n) { out.push(cur + (open ? '</i>' : '')); cur = open ? '<i>' : ''; len = 0 }
     cur += (len ? ' ' : '') + w; len += (len ? 1 : 0) + vis
     const o = (w.match(/<i>/g) ?? []).length, c = (w.match(/<\/i>/g) ?? []).length; if (o !== c) open = o > c
@@ -52,14 +56,14 @@ const scaleFonts = (o, k) => {   // every font/tickfont size in a layout, recurs
   return o
 }
 
-// the layout with style and caption for a width; base = the chart's own layout (margin = room for its axes)
+// the layout with style and caption ({ title, subtitle: [...], note, footer }) for a width; base = the chart's own layout (margin = room for its axes)
 function styled(base, cap, { width, k = 1 }) {
   const m = { t: 8, r: 16, b: 44, l: 56, ...(base.margin ?? {}) }
   const titleSize = SIZE.title * k, subSize = SIZE.sub * k, footSize = SIZE.foot * k
   const perLine = (px, f) => Math.max(24, Math.floor((width - 16) / (px * f)))
   const title = wrap(cap.title, perLine(titleSize, 0.52)).map(l => `<b>${l}</b>`)
   const sub = (cap.subtitle ?? []).flatMap(l => wrap(l, perLine(subSize, 0.47))).map(l => `<span style="font-size:${subSize}px;color:${MUTED}">${l}</span>`)
-  const foot = wrap(cap.footer ?? '', perLine(footSize, 0.47))
+  const foot = [...wrap(cap.note ? `<b>Note:</b> ${cap.note}` : '', perLine(footSize, 0.47)), ...wrap(cap.footer ?? '', perLine(footSize, 0.47))]
   const lines = title.length + sub.length
   const legendRoom = (base.legendRoom === true ? 1 : base.legendRoom || 0) * 26 * k   // rows of a legend above the plot
   const top = Math.ceil(lines * 1.3 * titleSize + 10 * k + legendRoom) + m.t * k, bottomAxes = m.b * k, footH = Math.ceil(foot.length * 1.3 * footSize + 8 * k)
@@ -67,15 +71,15 @@ function styled(base, cap, { width, k = 1 }) {
   const left = m.l * k, note = { showarrow: false, xref: 'paper', yref: 'paper', x: 0, xanchor: 'left', align: 'left', xshift: -left + 8 }
   return { ...L, autosize: false, paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: FONT, size: SIZE.base * k, color: INK },
     margin: { t: top, r: m.r * k, b: bottomAxes + footH, l: left, pad: 0 },
-    annotations: [...scaleFonts(base.annotations ?? [], k),
-      { ...note, text: [...title, ...sub].join('<br>'), y: 1, yanchor: 'top', yshift: top - 4, font: { family: FONT, size: titleSize, color: INK } },
+    annotations: [...scaleFonts(base.annotations ?? [], k).map(a => ({ ...a, text: arabicSpans(a.text, 15 * k) })),
+      { ...note, text: arabicSpans([...title, ...sub].join('<br>'), subSize * 1.2), y: 1, yanchor: 'top', yshift: top - 4, font: { family: FONT, size: titleSize, color: INK } },
       { ...note, text: foot.join('<br>'), y: 0, yanchor: 'top', yshift: -bottomAxes, font: { family: FONT, size: footSize, color: MUTED } }],
   }
 }
 
 const config = { responsive: false, displaylogo: false, modeBarButtonsToRemove: ['toImage', 'lasso2d', 'select2d'] }
 
-// draw traces with layout and caption ({ title, subtitle: [...], footer }) into el and remember them for exports
+// draw traces with layout and caption into el and remember them for exports
 export async function plot(el, traces, layout, caption, filename) {
   const Plotly = await loadPlotly()
   el._kit = { traces, layout, caption, filename }
