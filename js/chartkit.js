@@ -50,16 +50,16 @@ function wrap(line, n) {
   }
   if (cur) out.push(cur); return out
 }
-const scaleFonts = (o, k) => {   // every font/tickfont size in a layout, recursively
-  if (Array.isArray(o)) return o.map(x => scaleFonts(x, k))
-  if (o && typeof o === 'object') { const r = {}; for (const [a, b] of Object.entries(o)) r[a] = a === 'size' && typeof b === 'number' ? b * k : scaleFonts(b, k); return r }
+const scaleFonts = (o, k, d = 0) => {   // every font/tickfont size in a layout, recursively
+  if (Array.isArray(o)) return o.map(x => scaleFonts(x, k, d))
+  if (o && typeof o === 'object') { const r = {}; for (const [a, b] of Object.entries(o)) r[a] = a === 'size' && typeof b === 'number' ? (b + d) * k : scaleFonts(b, k, d); return r }
   return o
 }
 
 // the layout with style and caption ({ title, subtitle: [...], note, footer }) for a width; base = the chart's own layout (margin = room for its axes)
-function styled(base, cap, { width, k = 1 }) {
+function styled(base, cap, { width, k = 1, d = 0 }) {
   const m = { t: 8, r: 16, b: 44, l: 56, ...(base.margin ?? {}) }
-  const titleSize = SIZE.title * k, subSize = SIZE.sub * k, footSize = SIZE.foot * k
+  const titleSize = (SIZE.title + d) * k, subSize = (SIZE.sub + d) * k, footSize = (SIZE.foot + d) * k
   const perLine = (px, f) => Math.max(24, Math.floor((width - 16) / (px * f)))
   const title = wrap(cap.title, perLine(titleSize, 0.52)).map(l => `<b>${l}</b>`)
   const sub = (cap.subtitle ?? []).flatMap(l => wrap(l, perLine(subSize, 0.47))).map(l => `<span style="font-size:${subSize}px;color:${MUTED}">${l}</span>`)
@@ -67,11 +67,11 @@ function styled(base, cap, { width, k = 1 }) {
   const lines = title.length + sub.length
   const legendRoom = (base.legendRoom === true ? 1 : base.legendRoom || 0) * 26 * k   // rows of a legend above the plot
   const top = Math.ceil(lines * 1.3 * titleSize + 10 * k + legendRoom) + m.t * k, bottomAxes = m.b * k, footH = Math.ceil(foot.length * 1.3 * footSize + 8 * k)
-  const L = scaleFonts({ ...base, margin: undefined, annotations: undefined }, k)
+  const L = scaleFonts({ ...base, margin: undefined, annotations: undefined }, k, d)
   const left = m.l * k, note = { showarrow: false, xref: 'paper', yref: 'paper', x: 0, xanchor: 'left', align: 'left', xshift: -left + 8 }
-  return { ...L, autosize: false, paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: FONT, size: SIZE.base * k, color: INK },
+  return { ...L, autosize: false, paper_bgcolor: '#ffffff', plot_bgcolor: '#ffffff', font: { family: FONT, size: (SIZE.base + d) * k, color: INK },
     margin: { t: top, r: m.r * k, b: bottomAxes + footH, l: left, pad: 0 },
-    annotations: [...scaleFonts(base.annotations ?? [], k).map(a => ({ ...a, text: arabicSpans(a.text, 15 * k) })),
+    annotations: [...scaleFonts(base.annotations ?? [], k, d).map(a => ({ ...a, text: arabicSpans(a.text, (15 + d) * k) })),
       { ...note, text: arabicSpans([...title, ...sub].join('<br>'), subSize * 1.2), y: 1, yanchor: 'top', yshift: top - 4, font: { family: FONT, size: titleSize, color: INK } },
       { ...note, text: foot.join('<br>'), y: 0, yanchor: 'top', yshift: -bottomAxes, font: { family: FONT, size: footSize, color: MUTED } }],
   }
@@ -79,12 +79,16 @@ function styled(base, cap, { width, k = 1 }) {
 
 // height of a figure whose plot area is fixed: layout.plotHeight (px), or layout.aspect (plot height / plot width; aspectScale
 // for stacked panels); the caption and axes come on top of that, so the proportion holds for the plot itself
-function figureHeight(layout, caption, width, k = 1) {
+function figureHeight(layout, caption, width, k = 1, d = 0) {
   if (!layout.aspect && !layout.plotHeight) return null
-  const m = styled({ ...layout, height: 500 }, caption, { width, k }).margin
+  const m = styled({ ...layout, height: 500 }, caption, { width, k, d }).margin
   const plotH = layout.plotHeight ? layout.plotHeight * k : Math.max((width - m.l - m.r) * layout.aspect, 220 * k)
   return Math.round(m.t + m.b + plotH * (layout.aspectScale ?? 1))
 }
+
+// the reader's text size (the - and + buttons), in px; on screen only, exports keep their fixed sizes
+let fontDelta = 0
+export const setFontDelta = d => { fontDelta = d }
 
 const config = { responsive: false, displaylogo: false, modeBarButtonsToRemove: ['toImage', 'lasso2d', 'select2d'] }
 
@@ -92,9 +96,9 @@ const config = { responsive: false, displaylogo: false, modeBarButtonsToRemove: 
 export async function plot(el, traces, layout, caption, filename) {
   const Plotly = await loadPlotly()
   el._kit = { traces, layout, caption, filename }
-  const width = el.clientWidth || 800, fixed = figureHeight(layout, caption, width), height = fixed ?? layout.height ?? (el.clientHeight || 500)
+  const width = el.clientWidth || 800, fixed = figureHeight(layout, caption, width, 1, fontDelta), height = fixed ?? layout.height ?? (el.clientHeight || 500)
   if (fixed) el.style.height = `${fixed}px`
-  await Plotly.react(el, traces, { ...styled({ ...layout, height }, caption, { width }), width, height }, config)
+  await Plotly.react(el, traces, { ...styled({ ...layout, height }, caption, { width, d: fontDelta }), width, height }, config)
 }
 export async function redraw(el) { if (el?._kit) { const { traces, layout, caption, filename } = el._kit; await plot(el, traces, layout, caption, filename) } }
 export async function setShapes(el, shapes) { const Plotly = await loadPlotly(); el._kit.layout = { ...el._kit.layout, shapes }; await Plotly.relayout(el, { shapes }) }

@@ -5,7 +5,8 @@ import { readByIds, loadStatic, loadLabels } from './data.js'
 import { prepare, compute, relative, PERIODS_PLOT, CENTURIES } from './compute.js'
 import { overTimeTogether, overTimeSeparate, radarChart, typesOverTimeChart } from './charts.js'
 import { redraw, exportBar, styleOf, arabic } from './chartkit.js'
-import { panel, tabs, dialogs, citeDialog, copyText } from './ui.js'
+import { panel, tabs, dialogs, citeDialog, copyText, fontControls } from './ui.js'
+import { translitInput } from './translit.js'
 import { packState, unpackState } from './share.js'
 import { chartCitation } from './cite.js'
 import { renderTable, esc } from './tables.js'
@@ -63,6 +64,7 @@ function addLine(value = '') {
     <button type="button" class="remove" title="Remove this line" aria-label="Remove this line">×</button>`
   row.querySelector('input').value = value
   row.querySelector('input').addEventListener('keydown', e => { if (e.key === 'Enter') runSearch() })
+  translitInput(row.querySelector('input'))
   row.querySelector('.remove').onclick = () => { row.remove(); if (!document.querySelectorAll('#lines .line').length) addLine() }
   $('#lines').appendChild(row)
 }
@@ -171,11 +173,11 @@ function drawPreview(el, p) {
       <select aria-label="sort forms"><option value="count">sort: corpus count</option><option value="alpha">sort: transliteration</option><option value="arabic">sort: Arabic</option></select>
       <button type="button" data-a="all">tick all${f ? ' shown' : ''}</button><button type="button" data-a="none">untick all${f ? ' shown' : ''}</button>
     </div>
-    <table class="pv-list"><thead><tr><th></th><th>form</th><th>Arabic</th><th class="num">count (${m === 'all' ? 'all texts' : 'clean texts'})</th></tr></thead><tbody>
+    <table class="pv-list"><thead><tr><th></th><th>form</th><th>Arabic</th><th class="num" title="${m === 'all' ? 'Count in all texts' : 'Count in clean texts (~95%)'}">${m === 'all' ? 'N' : 'N*'}</th></tr></thead><tbody>
     ${rows.slice(p.page * PAGE, (p.page + 1) * PAGE).map(k => `<tr><td><input type="checkbox" data-id="${p.ids[k]}" ${p.excluded.has(p.ids[k]) ? '' : 'checked'} aria-label="tick ${esc(p.tr[k])}"></td>
       <td><code>${esc(p.tr[k])}</code></td><td dir="rtl" lang="ar">${esc(p.ar.get(p.ids[k]) ?? '')}</td><td class="num">${cnt(k).toLocaleString('en')}</td></tr>`).join('')}
     </tbody></table>
-    <div class="pager"><button data-p="prev" ${p.page === 0 ? 'disabled' : ''}>‹</button> <span>${rows.length ? p.page * PAGE + 1 : 0}–${Math.min((p.page + 1) * PAGE, rows.length)} of ${rows.length.toLocaleString('en')}${f ? ' (filtered)' : ''}</span> <button data-p="next" ${p.page >= pages - 1 ? 'disabled' : ''}>›</button></div>`
+    <div class="pager"><button data-p="prev" ${p.page === 0 ? 'disabled' : ''}>‹</button> <span>${rows.length ? p.page * PAGE + 1 : 0}–${Math.min((p.page + 1) * PAGE, rows.length)} of ${rows.length.toLocaleString('en')}${f ? ' (filtered)' : ''}</span> <button data-p="next" ${p.page >= pages - 1 ? 'disabled' : ''}>›</button> <span class="pv-key">${m === 'all' ? 'N: all texts' : 'N*: clean texts'}</span></div>`
   el.open = open
   const filt = el.querySelector('input[type=search]')
   filt.oninput = () => { p.filter = filt.value; p.page = 0; drawPreview(el, p); const n = el.querySelector('input[type=search]'); n.focus(); n.setSelectionRange(n.value.length, n.value.length) }
@@ -395,6 +397,7 @@ async function init() {
   exportBar($('#x-typestime'), () => [...document.querySelectorAll('#charts-types .js-plotly-plot')], () => dl('compsPeriodsGraph'))
   $('#download-all').onclick = downloadAll
   new ResizeObserver(onResize).observe($('#content'))
+  fontControls(() => activeCharts().forEach(el => redraw(el)))
   versionLine()
   if (st.lines.length) runSearch({ excluded: st.excluded.map(s => [...s]) })
   else UI.fold(false)

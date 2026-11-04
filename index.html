@@ -13,7 +13,7 @@
 <body>
 <header class="site">
   <div class="brand"><span class="name">OpenITI NgramReader</span><span class="sub">ADHFAIS App 1 · OpenITI 2023.1.8</span></div>
-  <nav aria-label="Site"><a id="link-other" href="https://maximromanov.github.io/classifier/" target="_blank" rel="noopener">Book Classifier ↗</a><a href="#" id="open-help">Help</a></nav>
+  <nav aria-label="Site"><a id="link-other" href="https://maximromanov.github.io/classifier/" target="_blank" rel="noopener">Book Classifier ↗</a><a href="#" id="open-help">Help</a><span class="fontsize" role="group" aria-label="Text size"><button type="button" id="font-minus" title="Smaller text" aria-label="Smaller text">−</button><button type="button" id="font-plus" title="Larger text" aria-label="Larger text">+</button></span></nav>
 </header>
 
 <div class="shell">
@@ -26,7 +26,7 @@
     <label><input type="radio" name="mode" value="all"> keep all texts (100%)</label>
   </fieldset>
   <button type="button" id="search" class="primary">Search</button>
-  <p class="hint">Each line is one curve: <code>#Label #item1 #item2</code>, in simplified Buckwalter or Arabic; words of a phrase joined with <code>_</code>; items are regular expressions. See <a href="#" data-help>Help</a>.</p>
+  <p class="hint">Each line is one curve: <code>#Label #item1 #item2</code>, in simplified Buckwalter or Arabic; words of a phrase joined with <code>_</code>; items are regular expressions. In the label, a row of special letters (ṭ ṯ ŧ …) opens as you type: tap one, or press Tab. See <a href="#" data-help>Help</a>.</p>
   <section id="preview" hidden></section>
   <button type="button" id="update" class="primary" hidden>Update results with the ticked forms</button>
 </aside>
@@ -94,6 +94,8 @@
 <p>Like the <a href="https://books.google.com/ngrams">Google Ngram Viewer</a>, the <b>OpenITI NgramReader</b> charts the frequencies of words and phrases over time, using the OpenITI corpus (8,468 texts; 1,054,622,781 tokens). Unlike it, the NgramReader lets you combine different forms of the same word into one curve — <i>kitāb</i>, <i>al-kitāb</i>, <i>wa-l-kitāb</i> — and build classes of terms, such as <i>Baġdād</i> together with <i>Madīnat al-salām</i>, or all cities of Ḫurāsān. By default, searches run on about 95% of the corpus: 414 texts (61 mln tokens) still contain paraeditorial elements and are left out unless you choose <i>keep all texts (100%)</i>. Time is given in periods of 25 years by the author's death date (AH).</p>
   <h3>Search lines</h3>
   <p>Each line is one curve: <code>#Label #item1 #item2 …</code>. The first <code>#</code> part is the label shown in the legend; the other parts are the items searched for, and their matches are added together. For example, <code>#Baġdād #bgdAd #bbgdAd #wbgdAd #wbbgdAd</code>, or shorter with a regular expression, <code>#Baġdād #[wb]?bgdAd</code>. Add as many lines as you like with <i>+ add line</i>.</p>
+  <h3>Typing labels</h3>
+  <p>While you type the label of a line (the first <code>#</code> part), a letter with special forms brings up a small row of them: <code>t</code> offers t, ṭ, ṯ, ŧ; <code>a</code> ā, á, ã; <code>d</code> ḍ, ḏ; <code>g</code> ġ; <code>h</code> ḥ, ḫ; <code>i</code> ī; <code>s</code> ṣ, š; <code>u</code> ū; <code>z</code> ẓ; the apostrophe <code>'</code> ʿ, ʾ. Tap one, or press Tab to step through them, and keep typing. Items, after the second <code>#</code>, are not changed.</p>
   <h3>Transliteration and Arabic input</h3>
   <p>Items are matched against the corpus in simplified Buckwalter transliteration: <code>ء = c</code>, <code>ا إ أ آ = A</code>, <code>ب = b</code>, <code>ة = o</code>, <code>ت = t</code>, <code>ث = v</code>, <code>ج = j</code>, <code>ح = H</code>, <code>خ = x</code>, <code>د = d</code>, <code>ذ = V</code>, <code>ر = r</code>, <code>ز = z</code>, <code>س = s</code>, <code>ش = E</code>, <code>ص = S</code>, <code>ض = D</code>, <code>ط = T</code>, <code>ظ = Z</code>, <code>ع = C</code>, <code>غ = g</code>, <code>ف = f</code>, <code>ق = q</code>, <code>ك = k</code>, <code>ل = l</code>, <code>م = m</code>, <code>ن = n</code>, <code>ه = h</code>, <code>ؤ ئ = c</code>, <code>و = w</code>, <code>ى ي = y</code>. You can also type items in Arabic script: letters are converted automatically, short vowels (harakat) and tatweel are removed, and a space between Arabic words becomes <code>_</code>. Labels stay as you type them.</p>
   <h3>Unigrams, bigrams, trigrams</h3>

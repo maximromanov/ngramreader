@@ -1,5 +1,6 @@
 // Shared interface pieces (both apps; keep both copies the same): foldable panel, tabs, dialogs, copy, toast.
 import { FORMATS } from './cite.js'
+import { setFontDelta } from './chartkit.js'
 const $ = s => document.querySelector(s)
 const phone = () => innerWidth < 600
 
@@ -29,6 +30,14 @@ export function tabs(host, list, onChange) {
   }
   host.onclick = e => { const b = e.target.closest('[role=tab]'); if (b && !b.disabled) api.set(b.dataset.tab) }
   return api
+}
+
+// text size: - and + next to Help, 0.5 pt per step (0.5 pt = 2/3 px), remembered in this browser
+export function fontControls(onChange) {
+  let step = 0; try { step = Number(localStorage.getItem('openiti-font-step')) || 0 } catch {}
+  const apply = () => { const px = step * 2 / 3; document.documentElement.style.setProperty('--fd', `${px}px`); setFontDelta(px); try { localStorage.setItem('openiti-font-step', step) } catch {} }
+  const change = d => { step = Math.max(-3, Math.min(8, step + d)); apply(); onChange() }
+  $('#font-minus').onclick = () => change(-1); $('#font-plus').onclick = () => change(1); apply()
 }
 
 export function toast(text) { const t = $('#toast'); t.textContent = text; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true }, 2000) }
