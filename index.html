@@ -12,7 +12,7 @@
 </head>
 <body>
 <header class="site">
-  <div class="brand"><span class="name">OpenITI NgramReader</span><span class="sub">ADHFAIS App 1 · OpenITI 2023.1.8</span></div>
+  <div class="brand"><a class="name" href="./">OpenITI NgramReader</a><span class="sub">ADHFAIS App 1 · OpenITI 2023.1.8</span></div>
   <nav aria-label="Site"><a id="link-other" href="https://maximromanov.github.io/classifier/" target="_blank" rel="noopener">Book Classifier ↗</a><a href="#" id="open-help">Help</a><span class="fontsize" role="group" aria-label="Text size"><button type="button" id="font-minus" title="Smaller text" aria-label="Smaller text">−</button><button type="button" id="font-plus" title="Larger text" aria-label="Larger text">+</button></span></nav>
 </header>
 
@@ -96,7 +96,7 @@
   <h3>Search lines</h3>
   <p>Each line is one curve: <code>#Label #item1 #item2 …</code>. The first <code>#</code> part is the label shown in the legend; the other parts are the items searched for, and their matches are added together. For example, <code>#Baġdād #bgdAd #bbgdAd #wbgdAd #wbbgdAd</code>, or shorter with a regular expression, <code>#Baġdād #[wb]?bgdAd</code>. Add as many lines as you like with <i>+ add line</i>.</p>
   <h3>Book types</h3>
-  <p>The bars show how the hits of each line divide over the book types: <i>Together</i> in one chart, <i>Separate</i> with a panel per line, always in the same order of types (by combined share). <i>Compared with corpus</i> divides a line's share of hits in a type by the type's share of the tokens of the selected corpus, on a log scale: at 1× a type has the hits its size predicts, to the right more, to the left fewer. The table uses the type codes; hold the pointer on a code for its name. <i>Classic (radar)</i> keeps the earlier chart.</p>
+  <p>The bars show how the hits of each line divide over the book types: <i>Together</i> in one chart, <i>Separate</i> with a panel per line, always with the types in alphabetical order, here and in every other chart. <i>Compared with corpus</i> divides a line's share of hits in a type by the type's share of the tokens of the selected corpus, on a log scale: at 1× a type has the hits its size predicts, to the right more, to the left fewer. The table uses the type codes; hold the pointer on a code for its name; a darker cell is a larger value within its line. <i>Classic (radar)</i> keeps the earlier chart.</p>
   <h3>Typing labels</h3>
   <p>While you type the label of a line (the first <code>#</code> part), a letter with special forms brings up a small row of them: <code>t</code> offers t, ṭ, ṯ, ŧ; <code>a</code> ā, á, ã; <code>d</code> ḍ, ḏ; <code>g</code> ġ; <code>h</code> ḥ, ḫ; <code>i</code> ī; <code>s</code> ṣ, š; <code>u</code> ū; <code>z</code> ẓ; the apostrophe <code>'</code> ʿ, ʾ. Tap one, or press Tab to step through them, and keep typing. Items, after the second <code>#</code>, are not changed.</p>
   <h3>Transliteration and Arabic input</h3>

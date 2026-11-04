@@ -2,14 +2,14 @@
 import { APP, CITATION, RELEASES, DEFAULT_RELEASE, dataBase, dataCommit, classifierURL, resolveRelease } from './config.js'
 import { validateLines } from './query.js'
 import { readByIds, loadStatic, loadLabels } from './data.js'
-import { prepare, compute, relative, PERIODS_PLOT, CENTURIES, compsCompared, typeOrder } from './compute.js'
+import { prepare, compute, relative, PERIODS_PLOT, CENTURIES, compsCompared } from './compute.js'
 import { overTimeTogether, overTimeSeparate, radarChart, typesOverTimeChart } from './charts.js'
-import { redraw, exportBar, styleOf, arabic, typeBars, narrow } from './chartkit.js'
+import { redraw, exportBar, styleOf, arabic, typeBars, narrow, byType } from './chartkit.js'
 import { panel, tabs, dialogs, citeDialog, copyText, fontControls } from './ui.js'
 import { translitInput } from './translit.js'
 import { packState, unpackState } from './share.js'
 import { chartCitation } from './cite.js'
-import { renderTable, esc } from './tables.js'
+import { renderTable, esc, fmt } from './tables.js'
 import { decodeState } from './state.js'
 import { toTSV, saveText, saveBlob, zipFiles, stamp } from './download.js'
 
@@ -42,7 +42,7 @@ const S = {
   P: null,                   // prepared static data
   results: null,             // last computed tables
   busy: false,
-  view: { value: 'rel', layout: 'together', corpus: true, ratio: '3', tchart: 'bars', tlayout: 'together', tmeasure: 'share' },   // switches of the Over time and Book types tabs
+  view: { value: 'rel', layout: 'together', corpus: false, ratio: '3', tchart: 'bars', tlayout: 'together', tmeasure: 'share' },   // switches of the Over time and Book types tabs
   dirty: new Set(),          // tabs to draw again
 }
 window.__ngr = S             // exposed for automated tests
@@ -153,7 +153,7 @@ function renderPreviews(previews) {
   const box = $('#preview'); box.innerHTML = ''
   box.hidden = !previews.length
   previews.forEach((p, k) => {
-    const el = document.createElement('details'); el.className = 'pv'; el.open = previews.length === 1 && p.ids.length <= 200
+    const el = document.createElement('details'); el.className = 'pv'; el.open = true
     box.appendChild(el); drawPreview(el, p)
   })
 }
@@ -203,10 +203,10 @@ const today = () => new Date().toISOString().slice(0, 10)
 const modeText = m => (m === 'all' ? 'All texts (100%)' : 'Texts without problematic ones (~95%)')
 const formsOf = l => { const p = S.previews.find(x => x.line.index === l.index); return { p, forms: l.ids.map(id => p.tr[p.ids.indexOf(id)]) } }
 const typed = r => r.replace(/^\\b\(/, '').replace(/\)\\b$/, '')   // the search as typed, without the \\b(…)\\b the app adds
-const shortForms = forms => (forms.length > 4 ? `${forms.slice(0, 4).join(', ')} and ${(forms.length - 4).toLocaleString('en')} more` : forms.join(', '))
+const shortForms = (forms, sep = ', ') => (forms.length > 4 ? `${forms.slice(0, 4).join(sep)} and ${(forms.length - 4).toLocaleString('en')} more` : forms.join(sep))
 // regex as typed; the found forms in Arabic script (first few; the full list is in the TSV and the zip README)
 const lineDetail = l => { const { p, forms } = formsOf(l), ar = l.ids.map((id, i) => (p.ar.get(id) ? arabic(p.ar.get(id)) : forms[i]))
-  return `${typed(l.regex)} · ${forms.length.toLocaleString('en')} of ${p.ids.length.toLocaleString('en')} forms: ${shortForms(ar)}` }
+  return `${typed(l.regex)} · ${forms.length.toLocaleString('en')} of ${p.ids.length.toLocaleString('en')} forms: ${shortForms(ar, `${arabic('،')} `)}` }
 const labelIt = l => `<i>${esc(l.userLabel)}</i>`
 function searchCaption(R) {
   const shown = R.lines.slice(0, 6).map(l => `${labelIt(l)}: ${lineDetail(l)}`)
@@ -262,13 +262,16 @@ const typeName = t => t.replace(/^\[.+?\]\s*/, '')
 const comparedRows = R => (R.compared ??= compsCompared(S.P, R.mode, R.compsTotalGraph))
 const typeLines = R => R.lines.filter(l => R.compsTotalGraph.some(r => r.label === l.label))
 const pct = v => `${(v * 100).toFixed(1)}%`
+const typesOf = rows => [...new Set(rows.map(r => r.compsFinal))].sort(byType)
+// table shading: the colour of the search line, darker for a larger value; each line on its own scale
+const shade = (v, max, l) => (v > 0 && max > 0 ? `background:rgba(${styleOf(l.index).rgb},${(0.62 * Math.sqrt(v / max)).toFixed(3)})` : '')
 async function drawTypes() {
   const R = S.results, V = S.view, stem = fileStem(), radar = V.tchart === 'radar', vs = !radar && V.tmeasure === 'corpus', lines = typeLines(R)
   $('#chart-radar').hidden = !radar; $('#chart-typebars').hidden = radar
   const base = `${corpusLine(R)} Book types from a classifier of the OpenITI texts.`
   if (radar) await radarChart($('#chart-radar'), R.compsTotalGraph, lines, { filename: `${stem}_booktypes_radar`, caption: { title: 'Distribution of hits over book types (share of hits)', subtitle: searchCaption(R), note: base, footer: footer() } })
   else {
-    const rows = comparedRows(R), order = typeOrder(rows), at = new Map(rows.map(r => [r.label + '\u0000' + r.compsFinal, r]))
+    const rows = comparedRows(R), order = typesOf(rows), at = new Map(rows.map(r => [r.label + '\u0000' + r.compsFinal, r]))
     const series = lines.map(l => { const rs = order.map(t => at.get(l.label + '\u0000' + t))
       return { name: labelIt(l), index: l.index, values: rs.map(r => (vs ? r.ratio : r.share)),
         hover: rs.map(r => `${esc(l.userLabel)}: ${vs ? `${r.ratio === null ? 'n/a' : `${r.ratio.toFixed(2)}×`} (${pct(r.share)} of hits, ${pct(r.corpusShare)} of corpus tokens)` : `${pct(r.share)} of hits (${r.ngramCount.toLocaleString('en')})`}`) } })
@@ -276,7 +279,7 @@ async function drawTypes() {
     await typeBars($('#chart-typebars'), { types: order, series, separate: V.tlayout === 'separate', scale: vs ? 'ratio' : 'share', xTitle: vs ? 'share of hits ÷ share of corpus tokens (log scale)' : 'share of hits',
       filename: `${stem}_booktypes_${vs ? 'vs_corpus' : 'share'}_${V.tlayout}`,
       caption: { title: vs ? 'Hits by book type compared with the corpus' : 'Distribution of hits over book types (share of hits)', subtitle: searchCaption(R), footer: footer(),
-        note: `${base}${vs ? ` Each bar: the line's share of hits in the type divided by the type's share of the corpus tokens. At 1× a type has the hits its size predicts; no bar: no hits.${ties}` : ` Types ordered by their combined share across the search lines.${ties}`}` } })
+        note: `${base}${vs ? ` Each bar: the line's share of hits in the type divided by the type's share of the corpus tokens. At 1× a type has the hits its size predicts; no bar: no hits.${ties}` : ` Types in alphabetical order.${ties}`}` } })
   }
   drawTypesTable()
 }
@@ -284,13 +287,16 @@ async function drawTypes() {
 function drawTypesTable() {
   const R = S.results, V = S.view, vs = V.tchart !== 'radar' && V.tmeasure === 'corpus', rows = comparedRows(R), host = $('#tbl-types'), key = $('#types-key')
   S.typesNarrow = narrow()
-  if (narrow()) { key.innerHTML = ''; renderTable(host, rows, ['label', 'compsFinal', 'ngramCount', 'percentage', ...(vs ? ['corpusShare', 'ratio'] : [])]); return }
-  const order = typeOrder(rows), at = new Map(rows.map(r => [r.label + '\u0000' + r.compsFinal, r]))
+  const value = r => (vs ? r.ratio ?? 0 : r.share), top = new Map(); for (const r of rows) top.set(r.label, Math.max(top.get(r.label) ?? 0, value(r)))
+  const lineOf = new Map(R.lines.map(l => [l.label, l]))
+  if (narrow()) { const cell = (v, r) => `<span class="shaded" style="${shade(value(r), top.get(r.label), lineOf.get(r.label))}">${esc(fmt(v))}</span>`
+    key.innerHTML = ''; renderTable(host, [...rows].sort((a, b) => byType(a.compsFinal, b.compsFinal)), ['label', 'compsFinal', 'ngramCount', 'percentage', ...(vs ? ['corpusShare', 'ratio'] : [])], { render: vs ? { ratio: cell } : { percentage: cell } }); return }
+  const order = typesOf(rows), at = new Map(rows.map(r => [r.label + '\u0000' + r.compsFinal, r]))
   const cell = r => { const v = vs ? (r.ngramCount ? `${r.ratio.toFixed(2)}×` : '–') : pct(r.share)
-    return `<td class="num" title="${esc(r.compsFinal)}: ${r.ngramCount.toLocaleString('en')} hits, ${pct(r.share)}; corpus ${pct(r.corpusShare)}">${v}</td>` }
+    return `<td class="num" style="${shade(value(r), top.get(r.label), lineOf.get(r.label))}" title="${esc(r.compsFinal)}: ${r.ngramCount.toLocaleString('en')} hits, ${pct(r.share)}; corpus ${pct(r.corpusShare)}">${v}</td>` }
   host.innerHTML = `<div class="table-scroll"><table class="pivot"><thead><tr><th>Search line</th>${order.map(t => `<th class="num" title="${esc(t)}">${esc(typeCode(t))}</th>`).join('')}</tr></thead>
     <tbody>${typeLines(R).map(l => `<tr><td><i>${esc(l.userLabel)}</i></td>${order.map(t => cell(at.get(l.label + '\u0000' + t))).join('')}</tr>`).join('')}</tbody></table></div>`
-  key.innerHTML = `${vs ? 'Share of hits ÷ share of corpus tokens. ' : 'Share of the line’s hits. '}${order.map(t => `<b>${esc(typeCode(t))}</b> ${esc(typeName(t))}`).join(' · ')}`
+  key.innerHTML = `${vs ? 'Share of hits ÷ share of corpus tokens. ' : 'Share of the line’s hits. '}Darker: larger within the line. ${order.map(t => `<b>${esc(typeCode(t))}</b> ${esc(typeName(t))}`).join(' · ')}`
 }
 
 async function drawTab(id) {
@@ -306,7 +312,8 @@ async function drawTab(id) {
       await typesOverTimeChart(d, R.compsPeriodsGraph, l, gmax, { aspect: aspect(), filename: `${stem}_booktypes_over_time_${l.index + 1}`,
         caption: { title: `Book types over time: ${labelIt(l)}`, subtitle: [`${labelIt(l)}: ${lineDetail(l)}`], note: `${corpusLine(R)} Height: hits per period and type, relative to the largest value of the search.`, footer: footer() } })
     }
-  } else if (id === 'century') renderTable($('#tbl-century'), R.chronoTable, CHRONO_TABLE_COLS, { rtl: ['ngram'] })
+  } else if (id === 'century') { const lineOf = new Map(R.lines.map(l => [l.label, l]))
+    renderTable($('#tbl-century'), R.chronoTable, CHRONO_TABLE_COLS, { rtl: ['ngram'], rowStyle: r => { const st = styleOf(lineOf.get(r.search)?.index ?? 0); return `background:rgba(${st.rgb},0.09);box-shadow:inset 4px 0 0 ${st.color}` } }) }
   else if (id === 'books') renderTable($('#tbl-books'), withBookLabels(R.booksTable), BOOK_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Book: renderBookLabel, URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
   else if (id === 'authors') renderTable($('#tbl-authors'), withAuthorLabels(R.authorsTable), AUTHOR_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Author: renderAuthorLabel } })
 }
@@ -364,11 +371,11 @@ async function downloadAll() {
 // the whole view in the hash (see share.js); defaults are left out. Old ?l=… links are still read (state.js).
 const viewState = () => { const V = S.view, x = {}; S.previews.forEach((p, i) => { if (p.excluded.size) x[i] = [...p.excluded].sort((a, b) => a - b).map(n => n.toString(36)).join('.') })
   return { l: S.previews.map(p => p.line.line), ...(Object.keys(x).length ? { x } : {}), ...(mode() === 'all' ? { m: 'a' } : {}), ...(span() !== 0.2 ? { s: span() } : {}), ...(S.release.release === DEFAULT_RELEASE ? { c: S.release.commit.slice(0, 7) } : { d: `${S.release.release}@${S.release.commit}` }),
-    ...(T.active !== 'time' ? { t: T.active } : {}), ...(V.value !== 'rel' ? { r: 0 } : {}), ...(V.layout !== 'together' ? { p: 1 } : {}), ...(V.corpus ? {} : { k: 0 }), ...(V.ratio !== '3' ? { a: 2 } : {}), ...(V.tchart === 'radar' ? { q: 1 } : {}), ...(V.tlayout === 'separate' ? { y: 1 } : {}), ...(V.tmeasure === 'corpus' ? { e: 1 } : {}) } }
+    ...(T.active !== 'time' ? { t: T.active } : {}), ...(V.value !== 'rel' ? { r: 0 } : {}), ...(V.layout !== 'together' ? { p: 1 } : {}), ...(V.corpus ? { k: 1 } : {}), ...(V.ratio !== '3' ? { a: 2 } : {}), ...(V.tchart === 'radar' ? { q: 1 } : {}), ...(V.tlayout === 'separate' ? { y: 1 } : {}), ...(V.tmeasure === 'corpus' ? { e: 1 } : {}) } }
 async function updateURL() { if (S.previews.length) history.replaceState(null, '', location.pathname + await packState(viewState())) }
 function fromPacked(o) {
   const lines = o.l ?? [], excluded = lines.map((_, i) => new Set((o.x?.[i] ?? '').split('.').filter(Boolean).map(t => parseInt(t, 36))))
-  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.k !== 0 && o.c !== 0, ratio: o.a === 2 ? '2' : '3', tchart: o.q ? 'radar' : 'bars', tlayout: o.y ? 'separate' : 'together', tmeasure: o.e ? 'corpus' : 'share' } }
+  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.k === 1, ratio: o.a === 2 ? '2' : '3', tchart: o.q ? 'radar' : 'bars', tlayout: o.y ? 'separate' : 'together', tmeasure: o.e ? 'corpus' : 'share' } }
 }
 const citation = () => { const R = S.results, y = new Date().getFullYear()
   return { year: y, title: `Results for ${R.lines.map(l => l.userLabel).join(', ')}`, app: CITATION.title, version: CITATION.version, doi: CITATION.doi, data: CITATION.data,

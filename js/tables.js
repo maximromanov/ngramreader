@@ -11,7 +11,7 @@ setPageWidth(); addEventListener('resize', setPageWidth)
 
 const fold = s => String(s ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 
-export function renderTable(container, rows, columns, { pageSize = 25, render = {}, rtl = [], quick = [] } = {}) {
+export function renderTable(container, rows, columns, { pageSize = 25, render = {}, rtl = [], quick = [], rowStyle = null } = {}) {
   // quick: [{ label, test(row) }], one-click filters beside the filter box; they combine with the text in it
   let sortCol = null, sortDir = 1, page = 0, filter = '', pick = -1
   const keys = rows.map(r => columns.map(c => fold(r[c])).join('\u0000'))
@@ -32,7 +32,7 @@ export function renderTable(container, rows, columns, { pageSize = 25, render = 
     body.innerHTML = `
       <div class="table-scroll"><table>
         <thead><tr>${columns.map(c => `<th data-col="${esc(c)}" class="${sortCol === c ? (sortDir > 0 ? 'asc' : 'desc') : ''}${typeof rows[0]?.[c] === 'number' ? ' num' : ''}">${esc(c)}</th>`).join('')}</tr></thead>
-        <tbody>${slice.map(r => `<tr>${columns.map(c => `<td${rtl.includes(c) ? ' dir="rtl" lang="ar"' : ''}${typeof r[c] === 'number' ? ' class="num"' : ''}>${render[c] ? render[c](r[c], r) : esc(fmt(r[c]))}</td>`).join('')}</tr>`).join('')}</tbody>
+        <tbody>${slice.map(r => `<tr${rowStyle ? ` style="${rowStyle(r)}"` : ''}>${columns.map(c => `<td${rtl.includes(c) ? ' dir="rtl" lang="ar"' : ''}${typeof r[c] === 'number' ? ' class="num"' : ''}>${render[c] ? render[c](r[c], r) : esc(fmt(r[c]))}</td>`).join('')}</tr>`).join('')}</tbody>
       </table></div>
       <div class="pager"><button data-p="prev" ${page === 0 ? 'disabled' : ''}>‹ Previous</button>
         <span>rows ${data.length ? page * pageSize + 1 : 0}–${Math.min((page + 1) * pageSize, data.length)} of ${data.length.toLocaleString('en')}${filter || pick >= 0 ? ` (filtered from ${rows.length.toLocaleString('en')})` : ''}</span>

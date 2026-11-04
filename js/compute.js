@@ -98,11 +98,6 @@ export function compsCompared(P, mode, comps) {
   return comps.map(r => { const share = totals.get(r.label) ? r.ngramCount / totals.get(r.label) : 0, corpusTokens = tok.get(r.compsFinal) ?? 0, corpusShare = corpusTokens / all
     return { ...r, share, corpusTokens, corpusShare, ratio: corpusShare > 0 ? share / corpusShare : null } })
 }
-// one order for all panels and measures: combined share across the search lines, largest first
-export function typeOrder(rows) {
-  const sum = new Map(); for (const r of rows) sum.set(r.compsFinal, (sum.get(r.compsFinal) ?? 0) + r.share)
-  return [...sum.keys()].sort((a, b) => sum.get(b) - sum.get(a) || cmp(a, b))
-}
 
 // ---- getData() ------------------------------------------------------------------------------------
 // lines: [{ label, ids (ticked, ascending) }]; rowsById: Map(ID -> [{ bookID, count }] in bookID order);

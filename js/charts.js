@@ -1,7 +1,7 @@
 // NgramReader charts, drawn with the shared chart kit (chartkit.js): style, in-chart captions, exports.
 import { PERIODS_PLOT } from './compute.js'
 import { smoothSeries } from './loess.js'
-import { plot, styleOf, narrow, GRID, AXIS, MUTED } from './chartkit.js'
+import { plot, styleOf, narrow, byType, GRID, AXIS, MUTED } from './chartkit.js'
 
 const AH2CE = ah => Math.round(ah - ah / 33 + 622)                       // R app: AH2CE()
 const TICKS = Array.from({ length: 14 }, (_, i) => 100 * (i + 1))
@@ -79,15 +79,15 @@ export async function radarChart(el, compsTotal, lines, { caption, filename }) {
 // height = freqsNorm / max(freqsNorm over all lines and types)
 export async function typesOverTimeChart(el, compsPeriods, L, globalMax, { caption, filename, aspect }) {
   const rows = compsPeriods.filter(r => r.label === L.label), st = styleOf(L.index)
-  const types = [...new Set(rows.map(r => r.compsFinal))]
+  const types = [...new Set(rows.map(r => r.compsFinal))].sort(byType), pos = new Map(types.map((t, i) => [t, (types.length - 1 - i) * 1.15]))   // the common order, read from the top
   const traces = []
   for (const t of types) {
     const rr = rows.filter(r => r.compsFinal === t).sort((a, b) => a.periods - b.periods)
-    const order = rr[0].order
+    const order = pos.get(t)
     traces.push({ x: rr.map(r => r.periods), y: rr.map(() => order), type: 'scatter', mode: 'lines', line: { width: 0.5, color: '#999' }, hoverinfo: 'skip', showlegend: false })
     traces.push({ x: rr.map(r => r.periods), y: rr.map(r => order + (globalMax ? r.freqsNorm / globalMax : 0)), type: 'scatter', mode: 'lines',
       fill: 'tonexty', fillcolor: `rgba(${st.rgb},0.45)`, line: { color: st.color, width: 1 }, name: t, showlegend: false, text: rr.map(r => `${t}<br>${r.periods} AH: ${r.freqsNorm.toPrecision(3)}`), hoverinfo: 'text' })
   }
-  const ticks = [...new Map(rows.map(r => [r.compsFinal, r.order])).entries()].sort((a, b) => a[1] - b[1])
+  const ticks = types.map(t => [t, pos.get(t)])
   await plot(el, traces, { exportPatch: PAPER_TICKS, margin: { l: narrow() ? 90 : 240, r: 16, b: 54 }, aspect, xaxis: timeAxis(), yaxis: { tickvals: ticks.map(t => t[1]), ticktext: ticks.map(t => (narrow() ? t[0].slice(0, 3) : t[0])), zeroline: false, showgrid: false, fixedrange: true, tickfont: { size: 12 } }, showlegend: false, hovermode: 'closest' }, caption, filename)
 }

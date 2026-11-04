@@ -140,6 +140,10 @@ const barMarker = (i, plain) => { const st = styleOf(i), f = plain ? 'solid' : F
   if (f === 'solid') return { color: st.color, line: { color: st.color, width: 0.5 } }
   if (f === 'light') return { color: `rgba(${st.rgb},0.25)`, line: { color: st.color, width: 1 } }
   return { color: '#ffffff', line: { color: st.color, width: 1 }, pattern: { shape: f, fgcolor: st.color, bgcolor: '#ffffff', size: 6, solidity: 0.45 } } }
+// the one order of book types in every chart and table: alphabetical by code, diacritics ignored, so H and Ḥ stand together;
+// "[U] undefined" falls last by itself, labels without a code ("----") after it
+const typeKey = t => { const c = /^\[(.+?)\]/.exec(t)?.[1]; return c ? c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase() : '\uFFFF' }
+export const byType = (a, b) => { const x = typeKey(a), y = typeKey(b); return x < y ? -1 : x > y ? 1 : a < b ? -1 : a > b ? 1 : 0 }
 export const shortType = t => t.replace(/ \(.*/, '').replace(/[“”]/g, '')
 // ratio scale: bars are log10(value), so they grow left and right from 1 ("as expected"); ticks carry the plain values
 const RATIO_TICKS = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]
