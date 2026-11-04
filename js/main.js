@@ -7,6 +7,7 @@ import { overTimeTogether, overTimeSeparate, radarChart, typesOverTimeChart } fr
 import { redraw, exportBar, styleOf, arabic } from './chartkit.js'
 import { panel, tabs, dialogs, citeDialog, copyText } from './ui.js'
 import { packState, unpackState } from './share.js'
+import { chartCitation } from './cite.js'
 import { renderTable, esc } from './tables.js'
 import { decodeState } from './state.js'
 import { toTSV, saveText, saveBlob, zipFiles, stamp } from './download.js'
@@ -211,7 +212,7 @@ function searchCaption(R) {
   return shown
 }
 const corpusLine = R => `${modeText(R.mode)}: ${S.P.modes[R.mode].nBooks.toLocaleString('en')} texts, ${S.P.modes[R.mode].tokens.toLocaleString('en')} tokens. 25-year periods by the author's death date.`
-const footer = () => `<b>SOURCE:</b> ${APP.name} • OpenITI ${S.release.release} • data ${dataCommit(S.release).slice(0, 7)} • ${today()} • <b>LINK:</b> ${location.href}`
+const footer = () => chartCitation(citation(), dataCommit(S.release).slice(0, 7))
 
 function renderChips(R) {
   $('#chips').innerHTML = R.lines.map(l => { const { p, forms } = formsOf(l), st = styleOf(l.index)
