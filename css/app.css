@@ -55,7 +55,7 @@ body.folded #strip { display: block; }
 .span input { width: 110px; }
 .chart { width: 100%; min-height: 420px; }
 .chart.fill { height: max(460px, calc(100vh - 262px)); }
-.chart.tall { height: 560px; margin-bottom: 18px; }
+.chart.tall { margin-bottom: 18px; }
 #empty { color: var(--muted); padding: 40px 0; }
 
 #lines { display: flex; flex-direction: column; gap: 6px; }

@@ -13,7 +13,7 @@ This version runs entirely in the browser. It is plain HTML, CSS and JavaScript 
 
 - **Left panel** (foldable; a drawer on phones): search lines, match lists with tickboxes, corpus switch.
 - **Top bar**: one chip per search line, the corpus and the release, and *Cite these results* (Chicago, APA, BibTeX, RIS), *Copy link*, *Download all*.
-- **Tabs**: Over time, Book types, Types over time, Centuries, Books, Authors (empty views are greyed out; Map is to come). *Over time* is one chart with the switches Relative/Absolute, Together/Separate (one panel per line: absolute counts as pale bars, relative frequency as a line), Corpus size, and the smoothing.
+- **Tabs**: Over time, Book types, Types over time, Centuries, Books, Authors (empty views are greyed out; Map is to come). *Over time* is one chart with the switches Relative/Absolute, Together/Separate (one panel per line: absolute counts as pale bars, relative frequency as a line), Corpus size, Proportion (plot height to width, 1:2 or 1:3; also on Types over time), and the smoothing.
 - **Charts carry their caption** (title, search, corpus, footer with app, release, data commit, date and link) on screen and in every export: SVG, PNG and TSV, in three sizes (Slide 1600 × 900, Paper about 1000 px wide, As on screen). One style in both apps: `js/chartkit.js`.
 - **Links** hold the whole view, tab and switches included, compactly in the hash (`#2…`, base64url, deflated when that is shorter, `js/share.js`; the data commit in 7 characters, resolved through `pins` in `js/config.js`). Old `?l=…` links still work, with their `d=` data pin.
 

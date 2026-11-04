@@ -77,13 +77,23 @@ function styled(base, cap, { width, k = 1 }) {
   }
 }
 
+// height of a figure whose plot area is fixed: layout.plotHeight (px), or layout.aspect (plot height / plot width; aspectScale
+// for stacked panels); the caption and axes come on top of that, so the proportion holds for the plot itself
+function figureHeight(layout, caption, width, k = 1) {
+  if (!layout.aspect && !layout.plotHeight) return null
+  const m = styled({ ...layout, height: 500 }, caption, { width, k }).margin
+  const plotH = layout.plotHeight ? layout.plotHeight * k : Math.max((width - m.l - m.r) * layout.aspect, 220 * k)
+  return Math.round(m.t + m.b + plotH * (layout.aspectScale ?? 1))
+}
+
 const config = { responsive: false, displaylogo: false, modeBarButtonsToRemove: ['toImage', 'lasso2d', 'select2d'] }
 
 // draw traces with layout and caption into el and remember them for exports
 export async function plot(el, traces, layout, caption, filename) {
   const Plotly = await loadPlotly()
   el._kit = { traces, layout, caption, filename }
-  const width = el.clientWidth || 800, height = layout.height ?? (el.clientHeight || 500)
+  const width = el.clientWidth || 800, fixed = figureHeight(layout, caption, width), height = fixed ?? layout.height ?? (el.clientHeight || 500)
+  if (fixed) el.style.height = `${fixed}px`
   await Plotly.react(el, traces, { ...styled({ ...layout, height }, caption, { width }), width, height }, config)
 }
 export async function redraw(el) { if (el?._kit) { const { traces, layout, caption, filename } = el._kit; await plot(el, traces, layout, caption, filename) } }
@@ -94,7 +104,7 @@ export async function chartImage(el, format, presetName) {
   const Plotly = await loadPlotly(); const p = PRESETS[presetName] ?? PRESETS.screen
   const width = p.width ?? el.offsetWidth, own = el._kit.layout, patch = own.exportPatch?.[presetName]
   const base = patch ? { ...own, xaxis: { ...own.xaxis, ...patch.xaxis } } : own     // per-preset axis changes (e.g. fewer labels)
-  const height = p.height ? (base.exportHeight?.[presetName] ?? p.height) : el.offsetHeight, k = p.k
+  const k = p.k, height = !p.height ? el.offsetHeight : base.exportHeight?.[presetName] ?? (presetName === 'slide' ? p.height : figureHeight(base, el._kit.caption, width, k) ?? p.height)
   const traces = el._kit.traces.map(t => (t.line?.width && k !== 1 ? { ...t, line: { ...t.line, width: t.line.width * k } } : t))
   const L = { ...styled({ ...base, height, fixed: true }, el._kit.caption, { width, k }), width, height, autosize: false }
   const url = await Plotly.toImage({ data: traces, layout: L, config: { displayModeBar: false } }, { format, width, height, scale: format === 'png' && presetName === 'screen' ? 2 : 1 })

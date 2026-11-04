@@ -41,7 +41,7 @@ const S = {
   P: null,                   // prepared static data
   results: null,             // last computed tables
   busy: false,
-  view: { value: 'rel', layout: 'together', corpus: true },   // switches of the Over time tab
+  view: { value: 'rel', layout: 'together', corpus: true, ratio: '3' },   // switches of the Over time tab
   dirty: new Set(),          // tabs to draw again
 }
 window.__ngr = S             // exposed for automated tests
@@ -234,6 +234,7 @@ async function renderResults() {
   await drawTab(T.active)
 }
 
+const aspect = () => (S.view.ratio === '2' ? 1 / 2 : 1 / 3)   // plot height / width
 async function drawTime() {
   const R = S.results, V = S.view, el = $('#chart-time'), stem = fileStem()
   const series = R.chronoGraph.map(g => { const l = R.lines.find(x => x.label === g.label); return { label: g.label, index: l.index, userLabel: l.userLabel, values: PERIODS_PLOT.map(p => g[p]) } })
@@ -248,11 +249,9 @@ async function drawTime() {
     subtitle: separate ? [] : searchCaption(R), note: `${corpusLine(R)} ${separate ? `Bars: occurrences per period (left axis); line: relative frequency, ${smooth} (right axis); each panel has its own scale.` : relative ? `Occurrences divided by the corpus tokens of the period; ${smooth}.` : `Occurrences per period; ${smooth}.`}${bars}`, footer: footer() }
   if (separate) {
     const panels = series.map((s, i) => ({ ...s, absolute: s.values, relative: rel[i].values, detail: lineDetail(R.lines.find(x => x.label === s.label)) }))
-    el.classList.remove('fill'); el.style.height = `${250 + 250 * panels.length}px`
-    await overTimeSeparate(el, panels, { span: R.span, corpus, caption, filename: `${stem}_over_time_separate`, panelHeight: 250 + 250 * panels.length })
+    await overTimeSeparate(el, panels, { span: R.span, corpus, caption, aspect: aspect(), filename: `${stem}_over_time_separate` })
   } else {
-    el.classList.add('fill'); el.style.height = ''
-    await overTimeTogether(el, relative ? rel : series, { relative, span: R.span, corpus, caption, filename: `${stem}_${relative ? 'relative' : 'absolute'}` })
+    await overTimeTogether(el, relative ? rel : series, { relative, span: R.span, corpus, caption, aspect: aspect(), filename: `${stem}_${relative ? 'relative' : 'absolute'}` })
   }
 }
 async function drawTab(id) {
@@ -268,7 +267,7 @@ async function drawTab(id) {
     const gmax = Math.max(...R.compsPeriodsGraph.map(r => r.freqsNorm))
     for (const l of R.lines.filter(l => R.compsPeriodsGraph.some(r => r.label === l.label && r.freqsNorm > 0))) {
       const d = document.createElement('div'); d.className = 'chart tall'; box.appendChild(d)
-      await typesOverTimeChart(d, R.compsPeriodsGraph, l, gmax, { filename: `${stem}_booktypes_over_time_${l.index + 1}`,
+      await typesOverTimeChart(d, R.compsPeriodsGraph, l, gmax, { aspect: aspect(), filename: `${stem}_booktypes_over_time_${l.index + 1}`,
         caption: { title: `Book types over time: ${labelIt(l)}`, subtitle: [`${labelIt(l)}: ${lineDetail(l)}`], note: `${corpusLine(R)} Height: hits per period and type, relative to the largest value of the search.`, footer: footer() } })
     }
   } else if (id === 'century') renderTable($('#tbl-century'), R.chronoTable, CHRONO_TABLE_COLS, { rtl: ['ngram'] })
@@ -329,11 +328,11 @@ async function downloadAll() {
 // the whole view in the hash (see share.js); defaults are left out. Old ?l=… links are still read (state.js).
 const viewState = () => { const V = S.view, x = {}; S.previews.forEach((p, i) => { if (p.excluded.size) x[i] = [...p.excluded].sort((a, b) => a - b).map(n => n.toString(36)).join('.') })
   return { l: S.previews.map(p => p.line.line), ...(Object.keys(x).length ? { x } : {}), ...(mode() === 'all' ? { m: 'a' } : {}), ...(span() !== 0.2 ? { s: span() } : {}), ...(S.release.release === DEFAULT_RELEASE ? { c: S.release.commit.slice(0, 7) } : { d: `${S.release.release}@${S.release.commit}` }),
-    ...(T.active !== 'time' ? { t: T.active } : {}), ...(V.value !== 'rel' ? { r: 0 } : {}), ...(V.layout !== 'together' ? { p: 1 } : {}), ...(V.corpus ? {} : { c: 0 }) } }
+    ...(T.active !== 'time' ? { t: T.active } : {}), ...(V.value !== 'rel' ? { r: 0 } : {}), ...(V.layout !== 'together' ? { p: 1 } : {}), ...(V.corpus ? {} : { k: 0 }), ...(V.ratio !== '3' ? { a: 2 } : {}) } }
 async function updateURL() { if (S.previews.length) history.replaceState(null, '', location.pathname + await packState(viewState())) }
 function fromPacked(o) {
   const lines = o.l ?? [], excluded = lines.map((_, i) => new Set((o.x?.[i] ?? '').split('.').filter(Boolean).map(t => parseInt(t, 36))))
-  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.c !== 0 } }
+  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.k !== 0 && o.c !== 0, ratio: o.a === 2 ? '2' : '3' } }
 }
 const citation = () => { const R = S.results, y = new Date().getFullYear()
   return { year: y, title: `Results for ${R.lines.map(l => l.userLabel).join(', ')}`, app: CITATION.title, version: CITATION.version, doi: CITATION.doi, data: CITATION.data,
@@ -355,8 +354,9 @@ const T = tabs($('#tabs'), TAB_LIST, async id => { await updateURL(); await draw
 const UI = panel({ onResize })
 const CITE = citeDialog(citation)
 function switches() {
-  const paint = () => { for (const [host, v] of [['#sw-value', S.view.value], ['#sw-layout', S.view.layout]]) $(host).querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === v); b.setAttribute('aria-pressed', b.dataset.v === v) }); $('#sw-corpus').checked = S.view.corpus }
-  const apply = async () => { paint(); if (S.results) { await updateURL(); S.dirty.add('time'); await drawTab('time') } }
+  const paint = () => { for (const [host, v] of [['#sw-value', S.view.value], ['#sw-layout', S.view.layout], ['#sw-ratio', S.view.ratio], ['#sw-ratio2', S.view.ratio]]) $(host).querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === v); b.setAttribute('aria-pressed', b.dataset.v === v) }); $('#sw-corpus').checked = S.view.corpus }
+  const apply = async () => { paint(); if (S.results) { await updateURL(); S.dirty.add('time'); S.dirty.add('typestime'); await drawTab(T.active) } }
+  for (const h of ['#sw-ratio', '#sw-ratio2']) $(h).onclick = e => { const b = e.target.closest('button'); if (b) { S.view.ratio = b.dataset.v; apply() } }
   $('#sw-value').onclick = e => { const b = e.target.closest('button'); if (b) { S.view.value = b.dataset.v; apply() } }
   $('#sw-layout').onclick = e => { const b = e.target.closest('button'); if (b) { S.view.layout = b.dataset.v; apply() } }
   $('#sw-corpus').onchange = () => { S.view.corpus = $('#sw-corpus').checked; apply() }
