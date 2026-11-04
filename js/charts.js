@@ -17,7 +17,7 @@ export async function overTimeTogether(el, series, { relative, span, corpus, cap
     traces.push({ x: PERIODS_PLOT, y: smoothSeries(PERIODS_PLOT, s.values, span), yaxis: yl, name: s.userLabel, type: 'scatter', mode: 'lines', line: { color: st.color, dash: st.dash, width: 2.4 },
       hovertemplate: `${s.userLabel}: %{y${relative ? ':.4%' : ':,.0f'}} at %{x} AH<extra></extra>` }) })
   const value = { title: { text: axisTitle(relative, span), font: { size: 12 } }, tickformat: relative ? '.3%' : ',', rangemode: 'tozero', gridcolor: GRID, zeroline: false, linecolor: AXIS }
-  const layout = { margin: { l: 72, r: 16, b: narrow() ? 66 : 56 }, showlegend: series.length > 1, legendRoom: series.length > 1, legend: { orientation: 'h', x: 0, y: 1, yanchor: 'bottom', font: { size: 13 } }, hovermode: 'closest', xaxis: timeAxis(), barmode: 'overlay' }
+  const layout = { margin: { l: 72, r: 16, b: narrow() ? 66 : 56 }, showlegend: series.length > 1, legendRoom: series.length > 1 ? (narrow() ? Math.ceil(series.length / 2) : 1) : 0, legend: { orientation: 'h', x: 0, y: 1, yanchor: 'bottom', font: { size: 13 } }, hovermode: 'closest', xaxis: timeAxis(), barmode: 'overlay' }
   if (corpus) { layout.yaxis = { visible: false, rangemode: 'tozero', fixedrange: true }; layout.yaxis2 = { ...value, overlaying: 'y', side: 'left' } } else layout.yaxis = value
   await plot(el, traces, layout, caption, filename)
 }
@@ -54,7 +54,7 @@ export async function radarChart(el, compsTotal, lines, { caption, filename }) {
       line: { color: st.color, dash: st.dash, width: 2 }, marker: { color: st.color, size: 6 }, mode: 'lines+markers', hovertemplate: `%{theta}: %{r:.4f}<extra>${L.userLabel}</extra>` } }).filter(t => t.r.length > 1)
   const theta = layers[0]?.theta ?? []
   await plot(el, [ring(theta, 0.8, 0.2), ring(theta, 0.6, 0.4), ring(theta, 0.4, 0.6), ...layers], {
-    margin: { b: 30, l: narrow() ? 75 : 40, r: narrow() ? 75 : 40 }, showlegend: true, legendRoom: true, legend: { orientation: 'h', x: 0, y: 1.02, yanchor: 'bottom', font: { size: 13 } },
+    margin: { b: 30, l: narrow() ? 75 : 40, r: narrow() ? 75 : 40 }, showlegend: true, legendRoom: narrow() ? Math.ceil(lines.length / 2) : 1, legend: { orientation: 'h', x: 0, y: 1.02, yanchor: 'bottom', font: { size: 13 } },
     polar: { domain: { x: [0, 1], y: [0, 0.96] }, radialaxis: { visible: true, range: [-0.1, 1], tickfont: { size: 11 } }, angularaxis: { tickfont: { size: narrow() ? 9 : 12 } } },
   }, caption, filename)
 }

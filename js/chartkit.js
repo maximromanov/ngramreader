@@ -61,7 +61,7 @@ function styled(base, cap, { width, k = 1 }) {
   const sub = (cap.subtitle ?? []).flatMap(l => wrap(l, perLine(subSize, 0.47))).map(l => `<span style="font-size:${subSize}px;color:${MUTED}">${l}</span>`)
   const foot = wrap(cap.footer ?? '', perLine(footSize, 0.47))
   const lines = title.length + sub.length
-  const legendRoom = base.legendRoom ? 26 * k : 0
+  const legendRoom = (base.legendRoom === true ? 1 : base.legendRoom || 0) * 26 * k   // rows of a legend above the plot
   const top = Math.ceil(lines * 1.3 * titleSize + 10 * k + legendRoom) + m.t * k, bottomAxes = m.b * k, footH = Math.ceil(foot.length * 1.3 * footSize + 8 * k)
   const L = scaleFonts({ ...base, margin: undefined, annotations: undefined }, k)
   const left = m.l * k, note = { showarrow: false, xref: 'paper', yref: 'paper', x: 0, xanchor: 'left', align: 'left', xshift: -left + 8 }
