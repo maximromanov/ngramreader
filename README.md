@@ -1,4 +1,4 @@
-# OpenITI NgramReader — static v1
+# OpenITI NgramReader (2.0)
 
 **https://maximromanov.github.io/ngramreader/**
 
@@ -8,6 +8,14 @@ The OpenITI NgramReader charts the chronological frequencies of words and phrase
 - tables by century, book and author.
 
 This version runs entirely in the browser. It is plain HTML, CSS and JavaScript on GitHub Pages, with no server process and no build step. It is a redesign of the R/Shiny NgramReader ("ADHFAIS APP{ENDIX} 1"). For the same search, it gives the same counts, frequencies and tables as the R app's 2026 Parquet version (see "Agreement with the R app" below).
+
+## Interface
+
+- **Left panel** (foldable; a drawer on phones): search lines, match lists with tickboxes, corpus switch.
+- **Top bar**: one chip per search line, the corpus and the release, and *Cite these results* (Chicago, APA, BibTeX, RIS), *Copy link*, *Download all*.
+- **Tabs**: Over time, Book types, Types over time, Centuries, Books, Authors (empty views are greyed out; Map is to come). *Over time* is one chart with the switches Relative/Absolute, Together/Separate (one panel per line: absolute counts as pale bars, relative frequency as a line), Corpus size, and the smoothing.
+- **Charts carry their caption** (title, search, corpus, footer with app, release, data commit, date and link) on screen and in every export: SVG, PNG and TSV, in three sizes (Slide 1600 × 900, Paper about 1000 px wide, As on screen). One style in both apps: `js/chartkit.js`.
+- **Links** hold the whole view, tab and switches included, compactly in the hash (`#v=2&s=…`, deflate + base64url, `js/share.js`). Old `?l=…` links still work, with their `d=` data pin.
 
 ## Data source and release
 
@@ -82,6 +90,31 @@ The LOESS curves agree within about 1e-13. Three deliberate differences remain:
 - **The same form in two search lines.** When one form matches in two lines, R duplicates its per-book rows; here each line counts it once.
 - **Zero rows in the book-type table.** R gives the zero rows of types without hits only to the first search line; here every line gets them. The non-zero values are the same.
 
+## Look and fonts
+
+Interface text is IBM Plex Sans, Arabic Noto Naskh Arabic (Google Fonts). Chart text is `Brill`, with `Noto Serif` as the fallback: no web font exists for Brill, so machines without it show Noto Serif. In exported images the text uses the fonts installed on the machine.
+
+## Development
+
+Run both apps and the local data copy from one server (Node, nothing to install; it supports HTTP Range requests):
+
+```
+cd /Users/romanov/MGR_PROJECTS/research/OPENITI_NGRAMREADER_2026
+node app-v1/tools/dev_server.mjs 8001 app-v1 classifier_app-v1 data_repos/ngramreader-data-2023.1.8-derived
+```
+
+Then open http://localhost:8001/ngramreader/. The git-ignored `js/config.local.js` points the app at the local data; it is loaded only on localhost, and without it the app reads the pinned commit from GitHub:
+
+```js
+export default { dataBase: 'http://localhost:8001/data/', commit: '<local data commit>', classifier: 'http://localhost:8001/classifier/' }
+```
+
+## Releasing a new version
+
+1. On Zenodo, reserve the DOI of the new version.
+2. In `js/config.js`, set `CITATION.doi` to it (until then the concept DOI, `10.5281/zenodo.15662941`) and `CITATION.version`, `CITATION.year` as needed.
+3. Move the pinned data commit in `js/config.js` if the data changed (same commit as the Book Classifier).
+
 ## Libraries
 
 All are loaded from `cdn.jsdelivr.net` at pinned versions (`js/config.js`):
@@ -95,7 +128,7 @@ All are loaded from `cdn.jsdelivr.net` at pinned versions (`js/config.js`):
 
 ## Citation
 
-Romanov, Maxim. (2025). *ADHFAIS APP{ENDIX} 1: OpenITI NgramReader (based on OpenITI, Release ver. 2023.1.8)* (Version 1) [Software]. Zenodo. https://doi.org/10.5281/zenodo.15662942
+Romanov, Maxim. (2026). *ADHFAIS App{endix} 1: OpenITI NgramReader (based on OpenITI, Release ver. 2023.1.8)* (Version 2.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.15662941
 
 **Acknowledgements:** Early versions of the NgramReader were developed within the KITAB Project, funded by ERC Consolidator Grant (#772989, 2018–2023); the current version has been developed within the framework of the EIS1600 Project, funded by DFG through the Emmy Noether Programm.
 

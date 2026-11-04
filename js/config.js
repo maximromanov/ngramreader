@@ -12,12 +12,21 @@ export const RELEASES = {
 }
 export const DEFAULT_RELEASE = '2023.1.8'
 
+// Local development only: on localhost a git-ignored js/config.local.js may point the app at a local data server
+// ({ dataBase, commit, classifier }; see README, "Development"). On any other host this is never loaded.
+export const DEV = ['localhost', '127.0.0.1'].includes(location.hostname)
+  ? await import('./config.local.js').then(m => m.default).catch(() => null) : null
+
 export const APP = {
   name: 'OpenITI NgramReader',
-  version: 'static v1',
+  version: '2.0',
   repo: 'maximromanov/ngramreader',
   classifier: 'https://maximromanov.github.io/classifier/',   // book and author profiles (Book Classifier), linked from the tables
 }
+
+// citation of the app. doi: for now the concept DOI of the Zenodo record; switch to the version DOI at release (README)
+export const CITATION = { version: '2.0', doi: '10.5281/zenodo.15662941', year: 2026, title: 'ADHFAIS App{endix} 1: OpenITI NgramReader', data: 'OpenITI, release 2023.1.8, https://doi.org/10.5281/zenodo.10007820' }
+export const classifierURL = () => DEV?.classifier ?? APP.classifier
 
 // pinned library versions (loaded from cdn.jsdelivr.net)
 export const LIBS = {
@@ -28,8 +37,9 @@ export const LIBS = {
 }
 
 export function dataBase(rel) {
-  return `https://raw.githubusercontent.com/${rel.repo}/${rel.commit}/`
+  return DEV?.dataBase ?? `https://raw.githubusercontent.com/${rel.repo}/${rel.commit}/`
 }
+export const dataCommit = rel => DEV?.commit ?? rel.commit
 
 // release from a "release@commit" token (URL state); unknown release or commit -> default entry
 export function resolveRelease(token) {

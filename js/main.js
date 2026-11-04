@@ -1,11 +1,14 @@
 // OpenITI NgramReader, static v1 — page controller.
-import { APP, RELEASES, DEFAULT_RELEASE, dataBase, resolveRelease } from './config.js'
+import { APP, CITATION, RELEASES, DEFAULT_RELEASE, dataBase, dataCommit, classifierURL, resolveRelease } from './config.js'
 import { validateLines } from './query.js'
 import { readByIds, loadStatic, loadLabels } from './data.js'
 import { prepare, compute, relative, PERIODS_PLOT, CENTURIES } from './compute.js'
-import { chronoChart, combinedChart, radarChart, typesOverTimeChart } from './charts.js'
+import { overTimeTogether, overTimeSeparate, radarChart, typesOverTimeChart } from './charts.js'
+import { redraw, exportBar, styleOf } from './chartkit.js'
+import { panel, tabs, dialogs, citeDialog, copyText } from './ui.js'
+import { packState, unpackState } from './share.js'
 import { renderTable, esc } from './tables.js'
-import { encodeState, decodeState } from './state.js'
+import { decodeState } from './state.js'
 import { toTSV, saveText, saveBlob, zipFiles, stamp } from './download.js'
 
 const $ = s => document.querySelector(s)
@@ -24,8 +27,8 @@ const withAuthorLabels = rows => rows.map(r => { const l = S.labels?.authors.get
   return { ...r, Author: l?.authorName ?? r.authorURI, Arabic: l?.authorAR || null } })
 // "*title*" markup -> italics; uncertain labels get a superscript "?"
 // the label links to the book's profile in the Book Classifier (new tab); the release text link stays in its own column
-const renderBookLabel = (v, r) => `<a href="${APP.classifier}?book=${encodeURIComponent(r.bookURI)}" target="_blank" rel="noopener" title="Book profile in the Book Classifier">${esc(v).replace(/\*([^*]+)\*/g, '<i>$1</i>')}</a>` + (r.labelUncertain ? `<sup class="uncertain" title="${UNCERTAIN}">?</sup>` : '')
-const renderAuthorLabel = (v, r) => `<a href="${APP.classifier}?author=${encodeURIComponent(r.authorURI)}" target="_blank" rel="noopener" title="Author profile in the Book Classifier">${esc(v)}</a>`
+const renderBookLabel = (v, r) => `<a href="${classifierURL()}?book=${encodeURIComponent(r.bookURI)}" target="_blank" rel="noopener" title="Book profile in the Book Classifier">${esc(v).replace(/\*([^*]+)\*/g, '<i>$1</i>')}</a>` + (r.labelUncertain ? `<sup class="uncertain" title="${UNCERTAIN}">?</sup>` : '')
+const renderAuthorLabel = (v, r) => `<a href="${classifierURL()}?author=${encodeURIComponent(r.authorURI)}" target="_blank" rel="noopener" title="Author profile in the Book Classifier">${esc(v)}</a>`
 
 // ---- state -------------------------------------------------------------------------------------------
 const S = {
@@ -37,6 +40,8 @@ const S = {
   P: null,                   // prepared static data
   results: null,             // last computed tables
   busy: false,
+  view: { value: 'rel', layout: 'together', corpus: true },   // switches of the Over time tab
+  dirty: new Set(),          // tabs to draw again
 }
 window.__ngr = S             // exposed for automated tests
 
@@ -102,6 +107,7 @@ async function runSearch({ excluded = null } = {}) {
     S.timing.preview = performance.now() - t0
     await computeAndRender()
     S.timing.done = performance.now() - t0
+    if (S.results) UI.autoFold()
   } catch (e) {
     console.error(e); message(`Something went wrong: ${esc(e.message)}. Please try again; if it persists, report it with the page address.`)
   } finally { S.busy = false; $('#search').disabled = false; status('') }
@@ -133,7 +139,7 @@ async function computeAndRender() {
   status('Computing results…')
   const R = compute(lines, cache, arabic, tr, S.P, mode())
   S.results = R ? { ...R, lines, mode: mode(), span: span(), relative: relative(R.chronoGraph, S.P, mode()) } : null
-  updateURL()
+  await updateURL()
   if (!R) { message('The ticked forms occur only in texts outside the selected corpus. Choose "keep all texts (100%)" to include them.'); hideResults(); return }
   await renderResults()
   $('#update').hidden = true
@@ -182,50 +188,92 @@ function drawPreview(el, p) {
 function changed() { $('#update').hidden = false }
 
 // ---- results -------------------------------------------------------------------------------------------
-function hideResults() { $('#results').hidden = true; S.results = null }
-const captionFor = R => R.lines.map(l => {
-  const p = S.previews.find(x => x.line.index === l.index)
-  const forms = l.ids.map(id => { const k = p.ids.indexOf(id); return `${p.tr[k]} (${p.ar.get(id) ?? ''})` })
-  return `<b>${esc(l.userLabel)}</b>: <code>${esc(l.regex)}</code> — ${forms.length.toLocaleString('en')} form${forms.length === 1 ? '' : 's'}: ${esc(forms.join(', '))}`
-}).join('<br>')
-function setCaption(id, html) {
-  const c = $(id); c.innerHTML = html; c.classList.add('collapsed')
-  c.onclick = () => c.classList.toggle('collapsed'); c.title = 'click to expand or collapse'
+function hideResults() {
+  S.results = null; $('#empty').hidden = false; document.querySelectorAll('[data-pane]').forEach(p => { p.hidden = true })
+  for (const id of ['cite', 'copy-link', 'download-all']) $('#' + id).disabled = true
+  $('#chips').innerHTML = '<span class="note">No results.</span>'; T.enable(Object.fromEntries(TAB_LIST.map(t => [t.id, false])))
 }
 function fileStem() { return `NgramReader_${S.results.lines.map(l => l.userLabel.replace(/[^\p{L}\p{N}]+/gu, '')).join('-').slice(0, 40) || 'search'}_${S.results.mode}` }
 
+// ---- captions: what a chart shows, written into the chart itself --------------------------------------------------
+const today = () => new Date().toISOString().slice(0, 10)
+const modeText = m => (m === 'all' ? 'All texts (100%)' : 'Texts without problematic ones (~95%)')
+const formsOf = l => { const p = S.previews.find(x => x.line.index === l.index); return { p, forms: l.ids.map(id => p.tr[p.ids.indexOf(id)]) } }
+const shortForms = forms => (forms.length > 4 ? `${forms.slice(0, 4).join(', ')} and ${(forms.length - 4).toLocaleString('en')} more` : forms.join(', '))
+const typed = r => r.replace(/^\\b\(/, '').replace(/\)\\b$/, '')   // the search as typed, without the \\b(…)\\b the app adds
+const lineDetail = l => { const { p, forms } = formsOf(l); return `${typed(l.regex)} · ${forms.length.toLocaleString('en')} of ${p.ids.length.toLocaleString('en')} forms: ${shortForms(forms)}` }
+function searchCaption(R) {
+  const shown = R.lines.slice(0, 6).map(l => `${l.userLabel}: ${lineDetail(l)}`)
+  if (R.lines.length > 6) shown.push(`and ${R.lines.length - 6} more lines (all in the TSV and the zip README)`)
+  return shown
+}
+const corpusLine = R => `${modeText(R.mode)}: ${S.P.modes[R.mode].nBooks.toLocaleString('en')} texts, ${S.P.modes[R.mode].tokens.toLocaleString('en')} tokens. 25-year periods by the author's death date.`
+const footer = () => `${APP.name} · OpenITI ${S.release.release} · data ${dataCommit(S.release).slice(0, 7)} · ${today()} · ${location.href}`
+
+function renderChips(R) {
+  $('#chips').innerHTML = R.lines.map(l => { const { p, forms } = formsOf(l), st = styleOf(l.index)
+    const dash = { solid: '', dash: '7 4', dot: '2 3', dashdot: '7 3 2 3', longdash: '12 4', longdashdot: '12 4 2 4' }[st.dash] ?? st.dash.replace(/px/g, '').replace(/,/g, ' ')
+    return `<button type="button" class="chip" data-line="${l.index}" title="Show this line in the panel"><svg width="26" height="8" aria-hidden="true"><line x1="0" y1="4" x2="26" y2="4" stroke="${st.color}" stroke-width="2.5" stroke-dasharray="${dash}"/></svg><b>${esc(l.userLabel)}</b> <code>${esc(typed(l.regex))}</code> <span>${forms.length.toLocaleString('en')} of ${p.ids.length.toLocaleString('en')} forms</span></button>` }).join('')
+    + `<span class="meta">${R.mode === 'all' ? 'All texts' : 'Clean texts (~95%)'} · OpenITI ${S.release.release}</span>`
+  $('#chips').querySelectorAll('.chip').forEach(c => c.onclick = () => { UI.fold(false); const k = S.previews.findIndex(p => p.line.index === +c.dataset.line); const d = document.querySelectorAll('#preview details')[k]; if (d) { d.open = true; d.scrollIntoView({ block: 'nearest' }) } })
+}
+
 async function renderResults() {
-  const R = S.results; $('#results').hidden = false
-  try { S.labels = await loadLabels(dataBase(S.release)) } catch (e) { S.labels = null; console.warn('labels not loaded:', e) }
-  const cap = captionFor(R)
-  const series = R.chronoGraph.map(g => ({ label: g.label, userLabel: R.lines.find(l => l.label === g.label).userLabel, values: PERIODS_PLOT.map(p => g[p]) }))
-  const rel = R.relative.map(r => ({ ...r, userLabel: R.lines.find(l => l.label === r.label).userLabel }))
-  const stem = fileStem()
-  $('#corpus-note').textContent = `${R.mode === 'all' ? 'All texts' : 'Texts without problematic ones (~95%)'}: ${S.P.modes[R.mode].nBooks.toLocaleString('en')} texts, ${S.P.modes[R.mode].tokens.toLocaleString('en')} tokens. Periods of 25 years AH (by the author's death date), shown 100–1400 AH.`
-  await chronoChart($('#chart-abs'), series, { relative: false, span: R.span, filename: stem + '_absolute', title: 'Absolute frequencies' }); setCaption('#cap-abs', cap)
-  await chronoChart($('#chart-rel'), rel, { relative: true, span: R.span, filename: stem + '_relative', title: 'Relative frequencies' }); setCaption('#cap-rel', cap)
-  const single = series.length === 1
-  $('#sec-combined').hidden = !single
-  if (single) { await combinedChart($('#chart-comb'), series[0], rel[0], { span: R.span, filename: stem + '_combined' }); setCaption('#cap-comb', cap) }
+  const R = S.results; $('#empty').hidden = true
+  for (const id of ['cite', 'copy-link', 'download-all']) $('#' + id).disabled = false
   const hasTypes = R.compsTotalGraph.some(r => r.ngramCount > 0)
-  $('#sec-radar').hidden = !hasTypes; $('#sec-types').hidden = !hasTypes
-  if (hasTypes) {
-    await radarChart($('#chart-radar'), R.compsTotalGraph, R.lines.filter(l => R.compsTotalGraph.some(r => r.label === l.label)), { filename: stem + '_booktypes_radar' }); setCaption('#cap-radar', cap)
+  T.enable({ time: true, types: hasTypes, typestime: hasTypes, century: R.chronoTable.length > 0, books: R.booksTable.length > 0, authors: R.authorsTable.length > 0 })
+  renderChips(R)
+  S.dirty = new Set(TAB_LIST.map(t => t.id))
+  try { S.labels = await loadLabels(dataBase(S.release)) } catch (e) { S.labels = null; console.warn('labels not loaded:', e) }
+  T.set(T.active, true)
+  await drawTab(T.active)
+}
+
+async function drawTime() {
+  const R = S.results, V = S.view, el = $('#chart-time'), stem = fileStem()
+  const series = R.chronoGraph.map(g => { const l = R.lines.find(x => x.label === g.label); return { label: g.label, index: l.index, userLabel: l.userLabel, values: PERIODS_PLOT.map(p => g[p]) } })
+  const rel = R.relative.map(r => { const l = R.lines.find(x => x.label === r.label); return { ...r, index: l.index, userLabel: l.userLabel } })
+  const tokens = PERIODS_PLOT.map(p => S.P.modes[R.mode].periodTokens.get(p) ?? 0), corpus = V.corpus ? tokens : null
+  const smooth = R.span <= 0.1 ? 'no smoothing' : `LOESS smoothing, span ${R.span}`
+  const bars = V.corpus ? ` Grey bars: corpus size per period (largest ${Math.max(...tokens).toLocaleString('en')} tokens).` : ''
+  const separate = V.layout === 'separate'
+  $('#sw-value').classList.toggle('off', separate)
+  const relative = V.value === 'rel'
+  const caption = { title: separate ? 'Absolute counts and relative frequency, by search line' : relative ? 'Relative frequency over time' : 'Absolute counts over time',
+    subtitle: [...(separate ? [] : searchCaption(R)), `${corpusLine(R)} ${separate ? `Bars: occurrences per period (left axis); line: relative frequency, ${smooth} (right axis); each panel has its own scale.` : relative ? `Occurrences divided by the corpus tokens of the period; ${smooth}.` : `Occurrences per period; ${smooth}.`}${bars}`], footer: footer() }
+  if (separate) {
+    const panels = series.map((s, i) => ({ ...s, absolute: s.values, relative: rel[i].values, detail: lineDetail(R.lines.find(x => x.label === s.label)) }))
+    el.classList.remove('fill'); el.style.height = `${250 + 250 * panels.length}px`
+    await overTimeSeparate(el, panels, { span: R.span, corpus, caption, filename: `${stem}_over_time_separate`, panelHeight: 250 + 250 * panels.length })
+  } else {
+    el.classList.add('fill'); el.style.height = ''
+    await overTimeTogether(el, relative ? rel : series, { relative, span: R.span, corpus, caption, filename: `${stem}_${relative ? 'relative' : 'absolute'}` })
+  }
+}
+async function drawTab(id) {
+  if (!S.results || !S.dirty.has(id)) return
+  S.dirty.delete(id); const R = S.results, stem = fileStem()
+  if (id === 'time') await drawTime()
+  else if (id === 'types') {
+    await radarChart($('#chart-radar'), R.compsTotalGraph, R.lines.filter(l => R.compsTotalGraph.some(r => r.label === l.label)), { filename: `${stem}_booktypes_radar`,
+      caption: { title: 'Distribution of hits over book types (share of hits)', subtitle: [...searchCaption(R), `${corpusLine(R)} Book types from a classifier of the OpenITI texts.`], footer: footer() } })
+    renderTable($('#tbl-types'), R.compsTotalGraph, ['label', 'compsFinal', 'ngramCount', 'percentage'])
+  } else if (id === 'typestime') {
     const box = $('#charts-types'); box.innerHTML = ''
     const gmax = Math.max(...R.compsPeriodsGraph.map(r => r.freqsNorm))
     for (const l of R.lines.filter(l => R.compsPeriodsGraph.some(r => r.label === l.label && r.freqsNorm > 0))) {
       const d = document.createElement('div'); d.className = 'chart tall'; box.appendChild(d)
-      await typesOverTimeChart(d, R.compsPeriodsGraph, l, gmax, { filename: `${stem}_booktypes_over_time_${l.index + 1}` })
+      await typesOverTimeChart(d, R.compsPeriodsGraph, l, gmax, { filename: `${stem}_booktypes_over_time_${l.index + 1}`,
+        caption: { title: `Book types over time: ${esc(l.userLabel)}`, subtitle: [`${l.userLabel}: ${lineDetail(l)}`, `${corpusLine(R)} Height: hits per period and type, relative to the largest value of the search.`], footer: footer() } })
     }
-    setCaption('#cap-types', cap)
-  }
-  renderTable($('#tbl-century'), R.chronoTable, CHRONO_TABLE_COLS, { rtl: ['ngram'] })
-  renderTable($('#tbl-books'), withBookLabels(R.booksTable), BOOK_COLS,
-    { rtl: ['Arabic', 'ngramAll'], render: { Book: renderBookLabel, URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
-  renderTable($('#tbl-authors'), withAuthorLabels(R.authorsTable), AUTHOR_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Author: renderAuthorLabel } })
-  renderTable($('#tbl-types'), R.compsTotalGraph, ['label', 'compsFinal', 'ngramCount', 'percentage'])
-  $('#sec-century').hidden = !R.chronoTable.length; $('#sec-books').hidden = !R.booksTable.length; $('#sec-authors').hidden = !R.authorsTable.length
+  } else if (id === 'century') renderTable($('#tbl-century'), R.chronoTable, CHRONO_TABLE_COLS, { rtl: ['ngram'] })
+  else if (id === 'books') renderTable($('#tbl-books'), withBookLabels(R.booksTable), BOOK_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Book: renderBookLabel, URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
+  else if (id === 'authors') renderTable($('#tbl-authors'), withAuthorLabels(R.authorsTable), AUTHOR_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Author: renderAuthorLabel } })
 }
+const activeCharts = () => [...document.querySelectorAll(`[data-pane="${T.active}"] .js-plotly-plot`)]
+let resizeTimer
+function onResize() { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => activeCharts().forEach(el => redraw(el)), 180) }
 
 // ---- downloads -----------------------------------------------------------------------------------------
 const TABLES = {
@@ -237,9 +285,11 @@ const TABLES = {
   compsTotalGraph: R => [R.compsTotalGraph, ['label', 'compsFinal', 'ngramCount', 'percentage']],
   compsPeriodsGraph: R => [R.compsPeriodsGraph, ['label', 'compsFinal', 'order', 'periods', 'freqsNorm']],
   bookData: R => [R.bookData, ['ID', 'label', 'ngramTR', 'ngram', 'count', 'bookURI']],
+  corpusSize: R => [PERIODS_PLOT.map(p => ({ period: p, tokens: S.P.modes[R.mode].periodTokens.get(p) ?? 0 })), ['period', 'tokens']],
 }
 const DESCRIPTIONS = {
   bookData: 'one row per ticked form per book (label = search line; ngramTR = transliteration; ngram = Arabic script; count = occurrences in the book); within each form, books in bookID order.',
+  corpusSize: 'tokens of the selected corpus per 25-year period (the grey bars of the Over time chart).',
   chronoGraph: 'per search line, absolute counts per 25-year AH period (columns 100 ... 1400 = period end, AH) and the matched forms (ngramAll).',
   chronoGraphRelative: 'per search line, relative frequencies per period: count / tokens of the selected corpus in that period (unsmoothed).',
   chronoTable: 'per form, counts per century (columns 100 ... 1400 = century end, AH; century 100 includes periods 25-100), with totals per search and per form.',
@@ -255,14 +305,15 @@ async function downloadAll() {
   const now = new Date()
   const readme = [
     `${APP.name} (${APP.version}), app commit ${S.appCommit ?? 'not available'} (https://github.com/${APP.repo})`,
-    `Data: OpenITI release ${S.release.release}; data repository ${S.release.repo}, commit ${S.release.commit}`,
+    `Data: OpenITI release ${S.release.release}; data repository ${S.release.repo}, commit ${dataCommit(S.release)}`,
     `Downloaded: ${now.toISOString()} (${now.toString()})`,
     `Corpus: ${R.mode === 'all' ? 'keep all texts (100%)' : 'remove problematic (~95%)'}; smoothing span (charts only): ${R.span}`,
     `Page address of this result: ${location.href}`,
+    '', 'Cite as:', CITE.text('chicago').replace(/\*/g, ''),
     '', 'Search lines and ticked forms:',
     ...R.lines.flatMap(l => { const p = S.previews.find(x => x.line.index === l.index); return [`  ${l.index + 1}. ${p.line.line}`, `     regex: ${l.regex}`, `     ticked forms (${l.ids.length} of ${p.ids.length}): ${l.ids.map(id => p.tr[p.ids.indexOf(id)]).join(', ')}`] }),
     '', 'Book titles and author names (columns Book, Author, Arabic) are working labels and may contain errors; the URI is authoritative.',
-    `Labels: ${S.release.repo}, commit ${S.release.commit}, labels/ (generated with a language model; without a label the column repeats the URI).`,
+    `Labels: ${S.release.repo}, commit ${dataCommit(S.release)}, labels/ (generated with a language model; without a label the column repeats the URI).`,
     '', 'Files (UTF-8, tab-separated, header row; character fields and column names in double quotes, embedded quotes doubled; NA = not available):',
     ...Object.keys(TABLES).map(n => `  ${n}.tsv: ${DESCRIPTIONS[n]} Columns: ${TABLES[n](R)[1].join(', ')}.`),
   ].join('\n') + '\n'
@@ -270,28 +321,61 @@ async function downloadAll() {
   saveBlob(await zipFiles(files), `${fileStem()}_${stamp()}.zip`)
 }
 
-// ---- URL state and version line ------------------------------------------------------------------------------
-function updateURL() {
-  const lines = S.previews.map(p => p.line.line)
-  const excluded = S.previews.map(p => p.excluded)
-  history.replaceState(null, '', '?' + encodeState({ lines, excluded, mode: mode(), span: span(), release: S.release }))
+// ---- URL state, citation and version line ------------------------------------------------------------------------
+// the whole view in the hash (#v=2&s=…, see share.js); defaults are left out. Old ?l=… links are still read (state.js).
+const viewState = () => { const V = S.view, x = {}; S.previews.forEach((p, i) => { if (p.excluded.size) x[i] = [...p.excluded].sort((a, b) => a - b).map(n => n.toString(36)).join('.') })
+  return { l: S.previews.map(p => p.line.line), ...(Object.keys(x).length ? { x } : {}), ...(mode() === 'all' ? { m: 'a' } : {}), ...(span() !== 0.2 ? { s: span() } : {}), d: `${S.release.release}@${S.release.commit}`,
+    ...(T.active !== 'time' ? { t: T.active } : {}), ...(V.value !== 'rel' ? { r: 0 } : {}), ...(V.layout !== 'together' ? { p: 1 } : {}), ...(V.corpus ? {} : { c: 0 }) } }
+async function updateURL() { if (S.previews.length) history.replaceState(null, '', location.pathname + await packState(viewState())) }
+function fromPacked(o) {
+  const lines = o.l ?? [], excluded = lines.map((_, i) => new Set((o.x?.[i] ?? '').split('.').filter(Boolean).map(t => parseInt(t, 36))))
+  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d, tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.c !== 0 } }
 }
+const citation = () => { const R = S.results, y = new Date().getFullYear()
+  return { year: y, title: `Results for ${R.lines.map(l => l.userLabel).join(', ')}`, app: CITATION.title, version: CITATION.version, doi: CITATION.doi, data: CITATION.data,
+    search: `${R.lines.map(l => { const { p, forms } = formsOf(l); return `${p.line.line} (${forms.length.toLocaleString('en')} of ${p.ids.length.toLocaleString('en')} forms)` }).join('; ')}; ${modeText(R.mode)}`,
+    accessed: today(), link: location.href, key: `romanov${y}ngramreader` } }
 async function versionLine() {
   try {
     const cached = sessionStorage.getItem('ngr-app-commit')
-    S.appCommit = cached || (await (await fetch(`https://api.github.com/repos/${APP.repo}/commits/main`)).json()).sha?.slice(0, 7) || null
+    S.appCommit = cached || (location.hostname === 'localhost' ? 'local' : (await (await fetch(`https://api.github.com/repos/${APP.repo}/commits/main`)).json()).sha?.slice(0, 7)) || null
     if (S.appCommit) sessionStorage.setItem('ngr-app-commit', S.appCommit)
   } catch { S.appCommit = null }
-  $('#version').innerHTML = `${APP.name} ${APP.version} · app commit <a href="https://github.com/${APP.repo}/commit/${S.appCommit ?? ''}">${S.appCommit ?? 'n/a'}</a> · data: OpenITI ${S.release.release}, <a href="https://github.com/${S.release.repo}/tree/${S.release.commit}">${S.release.repo.split('/')[1]}@${S.release.commit.slice(0, 7)}</a>`
+  const c = dataCommit(S.release)
+  $('#version').innerHTML = `${APP.name} ${APP.version} · app commit <a href="https://github.com/${APP.repo}/commit/${S.appCommit ?? ''}">${S.appCommit ?? 'n/a'}</a> · data: OpenITI ${S.release.release}, <a href="https://github.com/${S.release.repo}/tree/${c}">${S.release.repo.split('/')[1]}@${c.slice(0, 7)}</a>`
 }
 
 // ---- wiring --------------------------------------------------------------------------------------------
-function init() {
-  const st = decodeState(location.search)
+const TAB_LIST = [{ id: 'time', label: 'Over time' }, { id: 'types', label: 'Book types' }, { id: 'typestime', label: 'Types over time' }, { id: 'century', label: 'Centuries' }, { id: 'books', label: 'Books' }, { id: 'authors', label: 'Authors' }, { id: 'map', label: 'Map (soon)', soon: true }]
+const T = tabs($('#tabs'), TAB_LIST, async id => { await updateURL(); await drawTab(id); activeCharts().forEach(el => redraw(el)) })
+const UI = panel({ onResize })
+const CITE = citeDialog(citation)
+function switches() {
+  const paint = () => { for (const [host, v] of [['#sw-value', S.view.value], ['#sw-layout', S.view.layout]]) $(host).querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === v); b.setAttribute('aria-pressed', b.dataset.v === v) }); $('#sw-corpus').checked = S.view.corpus }
+  const apply = async () => { paint(); if (S.results) { await updateURL(); S.dirty.add('time'); await drawTab('time') } }
+  $('#sw-value').onclick = e => { const b = e.target.closest('button'); if (b) { S.view.value = b.dataset.v; apply() } }
+  $('#sw-layout').onclick = e => { const b = e.target.closest('button'); if (b) { S.view.layout = b.dataset.v; apply() } }
+  $('#sw-corpus').onchange = () => { S.view.corpus = $('#sw-corpus').checked; apply() }
+  paint()
+}
+const dl = name => { const [rows, cols] = TABLES[name](S.results); saveText(toTSV(rows, cols), `${fileStem()}_${name}.tsv`) }
+async function init() {
+  const packed = await unpackState(location.hash)
+  const st = packed ? fromPacked(packed) : decodeState(location.search)
   S.release = st.release ? resolveRelease(st.release) : RELEASES[DEFAULT_RELEASE]
+  if (st.view) S.view = st.view
   document.querySelector(`input[name=mode][value=${st.mode}]`).checked = true
   $('#span').value = st.span; $('#span-val').textContent = st.span <= 0.1 ? 'none' : st.span
   ;(st.lines.length ? st.lines : ['#al-kutub al-sittaŧ #(\\w+)?lktb_Alsto']).forEach(l => addLine(l))
+  T.enable(Object.fromEntries(TAB_LIST.map(t => [t.id, false])))
+  T.active = st.tab ?? 'time'
+  dialogs(); switches()
+  $('#link-other').href = classifierURL()
+  const c = CITATION; $('#citation-block').innerHTML = `<b>Citation:</b> Romanov, Maxim. (${c.year}). <i>${esc(c.title)} (based on OpenITI, Release ver. 2023.1.8)</i> (Version ${c.version}) [Software]. Zenodo. <a href="https://doi.org/${c.doi}">https://doi.org/${c.doi}</a>`
+  const help = e => { e.preventDefault(); $('#help-dialog').showModal() }
+  $('#open-help').onclick = help; document.querySelectorAll('[data-help]').forEach(a => a.onclick = help)
+  $('#cite').onclick = () => CITE.open()
+  $('#copy-link').onclick = async () => { await updateURL(); copyText(location.href, 'Link copied') }
   $('#add').onclick = () => { addLine(); document.querySelector('#lines .line:last-child input').focus() }
   $('#search').onclick = () => runSearch()
   $('#update').onclick = async () => { if (S.busy) return; S.busy = true; try { await computeAndRender() } finally { S.busy = false; status('') } }
@@ -300,10 +384,15 @@ function init() {
     if (S.results && !S.busy) { S.busy = true; try { await computeAndRender() } finally { S.busy = false; status('') } }
   })
   $('#span').oninput = () => { $('#span-val').textContent = span() <= 0.1 ? 'none' : span() }
-  $('#span').onchange = async () => { if (S.results) { S.results.span = span(); updateURL(); await renderResults() } }
-  document.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => { if (!S.results) return; const [rows, cols] = TABLES[b.dataset.dl](S.results); saveText(toTSV(rows, cols), `${fileStem()}_${b.dataset.dl}.tsv`) })
+  $('#span').onchange = async () => { if (S.results) { S.results.span = span(); await updateURL(); S.dirty.add('time'); await drawTab('time') } }
+  document.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => { if (S.results) dl(b.dataset.dl) })
+  exportBar($('#x-time'), () => [$('#chart-time')], () => { if (S.view.layout === 'separate') { dl('chronoGraph'); dl('chronoGraphRelative') } else dl(S.view.value === 'rel' ? 'chronoGraphRelative' : 'chronoGraph'); dl('corpusSize') })
+  exportBar($('#x-types'), () => [$('#chart-radar')], () => dl('compsTotalGraph'))
+  exportBar($('#x-typestime'), () => [...document.querySelectorAll('#charts-types .js-plotly-plot')], () => dl('compsPeriodsGraph'))
   $('#download-all').onclick = downloadAll
+  new ResizeObserver(onResize).observe($('#content'))
   versionLine()
   if (st.lines.length) runSearch({ excluded: st.excluded.map(s => [...s]) })
+  else UI.fold(false)
 }
 init()
