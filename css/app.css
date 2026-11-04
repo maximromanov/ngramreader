@@ -54,6 +54,7 @@ sup.uncertain { color: var(--muted); cursor: help; margin-left: 2px; }
 .pager { display: flex; gap: 10px; align-items: center; margin: 6px 0; font-size: 0.9rem; }
 .chart { width: 100%; min-height: 420px; margin-top: 18px; }
 .chart.tall { min-height: 520px; }
+.chart.radar { min-height: 560px; }
 .caption { font-size: 0.85rem; color: var(--muted); cursor: pointer; border-left: 3px solid var(--line); padding-left: 8px; overflow-wrap: anywhere; }
 .caption.collapsed { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .downloads { margin-top: 14px; }
@@ -64,6 +65,7 @@ footer { margin-top: 40px; padding-bottom: 30px; font-size: 0.9rem; color: var(-
 @media (max-width: 600px) {
   header h1 { font-size: 1.4rem; }
   .chart { min-height: 340px; }
+  .chart.radar { min-height: 420px; }
   .controls { gap: 8px; }
   #search { width: 100%; }
 }

@@ -57,20 +57,23 @@ export async function combinedChart(el, s, rel, { span, filename }) {
 }
 
 // radar of book types (shares of hits), one trace per line; type names abbreviated as in the R app
+// same design as the Book Classifier's book radar (classifier js/charts.js): full type names on the axes, grey rings,
+// filled layers, scale 0-1 with the centre at -0.1; one layer per search line
+const RADAR_RGB = ['0,100,0', '255,0,0', '255,255,0', '31,59,115', '122,78,163', '192,138,0', '58,143,183', '140,86,75', '227,119,194', '85,85,85']
+const ring = (theta, r, a) => ({ type: 'scatterpolar', r: theta.map(() => r), theta, fill: 'toself', fillcolor: `rgba(200,200,200,${a})`, line: { color: 'rgba(0,0,0,0)' }, mode: 'lines', hoverinfo: 'skip', showlegend: false })
 export async function radarChart(el, compsTotal, lines, { filename }) {
   const Plotly = await loadPlotly()
-  const abbrev = c => c.slice(0, 3).toUpperCase()                         // "[B] biographical (tarājim)" -> "[B]"
-  const traces = lines.map((L, i) => {
-    const rows = compsTotal.filter(r => r.label === L.label).sort((a, b) => abbrev(a.compsFinal) < abbrev(b.compsFinal) ? -1 : 1)
-    const r = rows.map(x => x.percentage * 100), theta = rows.map(x => abbrev(x.compsFinal))
-    return { type: 'scatterpolar', r: [...r, r[0]], theta: [...theta, theta[0]], name: L.userLabel, fill: 'toself', fillcolor: 'rgba(200,200,200,0.15)',
-             line: { color: COLORS[i % COLORS.length], dash: DASH[i % DASH.length], width: 2 }, mode: 'lines+markers', marker: { size: 4 },
-             hovertext: [...rows.map(x => x.compsFinal), rows[0]?.compsFinal], hoverinfo: 'text+r' }
+  const byType = (a, b) => (a.compsFinal < b.compsFinal ? -1 : a.compsFinal > b.compsFinal ? 1 : 0)     // code-point order, as in the classifier
+  const narrow = innerWidth < 600, axis = c => (narrow ? c.replace(/ /g, '<br>').replace(/-/g, '-<br>') : c)                 // long names wrap on phones
+  const layers = lines.map((L, i) => {
+    const rows = compsTotal.filter(r => r.label === L.label).sort(byType), rgb = RADAR_RGB[i % RADAR_RGB.length]
+    return { type: 'scatterpolar', r: rows.map(x => x.percentage), theta: rows.map(x => axis(x.compsFinal)), name: L.userLabel, fill: 'toself', fillcolor: `rgba(${rgb},0.6)`,
+             line: { color: `rgba(${rgb},0.6)` }, marker: { color: `rgb(${rgb})` }, mode: 'lines+markers', hovertemplate: `%{theta}: %{r:.4f}<extra>${L.userLabel}</extra>` }
   }).filter(t => t.r.length > 1)
-  const top = Math.max(5, ...traces.flatMap(t => t.r))
-  await Plotly.react(el, traces, {
-    font, title: { text: 'Distribution over book types (% of hits)', font: { size: 15 } }, margin: { t: 50, r: 30, l: 30, b: 30 }, legend: { orientation: 'h' },
-    polar: { radialaxis: { range: [0, Math.ceil(top / 5) * 5], ticksuffix: '%' } },
+  const theta = layers[0]?.theta ?? []
+  await Plotly.react(el, [ring(theta, 0.8, 0.2), ring(theta, 0.6, 0.4), ring(theta, 0.4, 0.6), ...layers], {
+    font, title: { text: 'Distribution over book types (share of hits)', font: { size: 15 } }, margin: { t: 50, b: 30, l: narrow ? 75 : 40, r: narrow ? 75 : 40 }, showlegend: true, legend: { orientation: 'h', y: -0.12 },
+    polar: { radialaxis: { visible: true, range: [-0.1, 1] }, angularaxis: { tickfont: { size: narrow ? 9 : 12 } } },
   }, config(filename))
 }
 
