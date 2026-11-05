@@ -11,12 +11,12 @@ setPageWidth(); addEventListener('resize', setPageWidth)
 
 const fold = s => String(s ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 
-export function renderTable(container, rows, columns, { pageSize = 25, render = {}, rtl = [], quick = [], rowStyle = null } = {}) {
+export function renderTable(container, rows, columns, { pageSize = 25, render = {}, rtl = [], quick = [], quickOn = -1, rowStyle = null } = {}) {
   // quick: [{ label, test(row) }], one-click filters beside the filter box; they combine with the text in it
-  let sortCol = null, sortDir = 1, page = 0, filter = '', pick = -1
+  let sortCol = null, sortDir = 1, page = 0, filter = '', pick = quickOn
   const keys = rows.map(r => columns.map(c => fold(r[c])).join('\u0000'))
   const count = q => rows.filter(q.test).length.toLocaleString('en')
-  const quickBar = quick.length ? `<span class="seg tbl-quick" role="group" aria-label="Quick filter"><button type="button" data-q="-1" class="on">All (${rows.length.toLocaleString('en')})</button>${quick.map((q, i) => `<button type="button" data-q="${i}">${esc(q.label)} (${count(q)})</button>`).join('')}</span>` : ''
+  const quickBar = quick.length ? `<span class="seg tbl-quick" role="group" aria-label="Quick filter"><button type="button" data-q="-1" class="${pick < 0 ? 'on' : ''}">All (${rows.length.toLocaleString('en')})</button>${quick.map((q, i) => `<button type="button" data-q="${i}" class="${pick === i ? 'on' : ''}">${esc(q.label)} (${count(q)})</button>`).join('')}</span>` : ''
   container.innerHTML = `<div class="tbl-tools"><input type="search" class="tbl-filter" placeholder="Filter rows (any column)" aria-label="Filter rows">${quickBar}</div><div class="tbl-body"></div>`
   const input = container.querySelector('.tbl-filter'), body = container.querySelector('.tbl-body')
   input.oninput = () => { filter = fold(input.value.trim()); page = 0; draw() }

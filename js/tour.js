@@ -24,6 +24,7 @@ export function createTours({ open, links = {} }) {
     const els = [].concat(sel ?? []).flatMap(s => [...document.querySelectorAll(s)]); els.forEach(e => e.classList.add('tour-spot')); const el = els[0]; if (!el || !card) return
     const room = phone() ? card.getBoundingClientRect().top : innerHeight, tall = el.getBoundingClientRect().height > room * 0.6
     if (phone()) el.scrollIntoView({ block: tall ? 'start' : 'center', inline: 'nearest' })
+    else if (el.getBoundingClientRect().top > innerHeight * 0.6) scrollBy(0, el.getBoundingClientRect().top - innerHeight * 0.35)
     else if (!tall) { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); const r = el.getBoundingClientRect(), c = card.getBoundingClientRect(); if (r.bottom > c.top - 8 && r.top < c.bottom && r.left < c.right && r.right > c.left) scrollBy(0, r.bottom - c.top + 14) } }
   const paint = () => { const s = tour.stops[stop], n = tour.stops.length, last = stop === n - 1, more = s.continue
     card.innerHTML = `<button type="button" class="tour-x" aria-label="Close the tour" title="Close the tour (Esc)">×</button>${last ? '' : '<button type="button" class="tour-skip">Skip the tour</button>'}
