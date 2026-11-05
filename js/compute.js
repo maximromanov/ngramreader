@@ -91,12 +91,12 @@ export function corpusTypeTokens(P, mode) {
   for (const [uri, b] of M.byURI) for (const bc of P.booksClassified.get(uri) ?? [{ comparables: null, index: null }]) t.set(compsOf(bc), (t.get(compsOf(bc)) ?? 0) + b.tok_length)
   return (M.typeTokens = t)
 }
-// compsTotalGraph rows plus: share (unrounded), corpusTokens, corpusShare, ratio = share / corpusShare (null without tokens)
+// compsTotalGraph rows plus: lineHits (all hits of the line), share (unrounded), corpusTokens, corpusShare, ratio = share / corpusShare (null without tokens)
 export function compsCompared(P, mode, comps) {
   const tok = corpusTypeTokens(P, mode), all = [...tok.values()].reduce((a, b) => a + b, 0), totals = new Map()
   for (const r of comps) totals.set(r.label, (totals.get(r.label) ?? 0) + r.ngramCount)
   return comps.map(r => { const share = totals.get(r.label) ? r.ngramCount / totals.get(r.label) : 0, corpusTokens = tok.get(r.compsFinal) ?? 0, corpusShare = corpusTokens / all
-    return { ...r, share, corpusTokens, corpusShare, ratio: corpusShare > 0 ? share / corpusShare : null } })
+    return { ...r, lineHits: totals.get(r.label), share, corpusTokens, corpusShare, ratio: corpusShare > 0 ? share / corpusShare : null } })
 }
 
 // ---- getData() ------------------------------------------------------------------------------------

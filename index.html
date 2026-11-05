@@ -55,6 +55,12 @@
   </section>
   <section data-pane="types" hidden>
     <div class="toolbar"><div class="seg" id="sw-tchart" role="group" aria-label="Chart"><button type="button" data-v="bars">Bars</button><button type="button" data-v="radar">Classic (radar)</button></div><div class="seg" id="sw-tlayout" role="group" aria-label="Layout"><button type="button" data-v="together">Together</button><button type="button" data-v="separate">Separate</button></div><div class="seg" id="sw-tmeasure" role="group" aria-label="Measure"><button type="button" data-v="share">Share</button><button type="button" data-v="corpus">Compared with corpus</button></div><span class="grow"></span><span class="xbar" id="x-types"></span></div>
+    <details class="how" id="how-compared" open hidden><summary>How to read this chart</summary>
+      <p>Some kinds of books, such as biographical dictionaries, make up a large part of the corpus, so most words appear in them often simply because there is so much of them. This chart removes that effect. For each book type it compares the share of your search's hits found there with that type's share of the whole corpus.</p>
+      <ul><li>The <b>line at 1×</b> means “as expected”: the word is as common in this type as the type's size predicts.</li><li>A <b>bar to the right</b> means more than expected: <b>2×</b> is twice as frequent.</li><li>A <b>bar to the left</b> means less than expected: <b>0.5×</b> is half as frequent.</li></ul>
+      <p><i>Example (made-up numbers):</i> if chronicles hold 8 % of all words in the corpus but 16 % of the hits for your search, the bar for chronicles reaches 2×.</p>
+      <p>Bars based on only a few hits can be misleading; hover over a bar, or tap it, to see how many hits it rests on. Light bars rest on fewer than 20 hits.</p>
+    </details>
     <div class="chart" id="chart-typebars"></div>
     <div class="chart fill" id="chart-radar" hidden></div>
     <h2>Hits by book type</h2>
@@ -96,7 +102,12 @@
   <h3>Search lines</h3>
   <p>Each line is one curve: <code>#Label #item1 #item2 …</code>. The first <code>#</code> part is the label shown in the legend; the other parts are the items searched for, and their matches are added together. For example, <code>#Baġdād #bgdAd #bbgdAd #wbgdAd #wbbgdAd</code>, or shorter with a regular expression, <code>#Baġdād #[wb]?bgdAd</code>. Add as many lines as you like with <i>+ add line</i>.</p>
   <h3>Book types</h3>
-  <p>The bars show how the hits of each line divide over the book types: <i>Together</i> in one chart, <i>Separate</i> with a panel per line, always with the types in alphabetical order, here and in every other chart. <i>Compared with corpus</i> divides a line's share of hits in a type by the type's share of the tokens of the selected corpus, on a log scale: at 1× a type has the hits its size predicts, to the right more, to the left fewer. The table uses the type codes; hold the pointer on a code for its name; a darker cell is a larger value within its line. <i>Classic (radar)</i> keeps the earlier chart.</p>
+  <p>The bars show how the hits of each line divide over the book types: <i>Together</i> in one chart, <i>Separate</i> with a panel per line, always with the types in alphabetical order, here and in every other chart. <i>Compared with corpus</i> divides a line's share of hits in a type by the type's share of the tokens of the selected corpus, on a log scale. The table uses the type codes; hold the pointer on a code for its name; a darker cell is a larger value within its line. <i>Classic (radar)</i> keeps the earlier chart.</p>
+  <h4>How to read Compared with corpus</h4>
+  <p>Some kinds of books, such as biographical dictionaries, make up a large part of the corpus, so most words appear in them often simply because there is so much of them. This chart removes that effect. For each book type it compares the share of your search's hits found there with that type's share of the whole corpus.</p>
+      <ul><li>The <b>line at 1×</b> means “as expected”: the word is as common in this type as the type's size predicts.</li><li>A <b>bar to the right</b> means more than expected: <b>2×</b> is twice as frequent.</li><li>A <b>bar to the left</b> means less than expected: <b>0.5×</b> is half as frequent.</li></ul>
+      <p><i>Example (made-up numbers):</i> if chronicles hold 8 % of all words in the corpus but 16 % of the hits for your search, the bar for chronicles reaches 2×.</p>
+      <p>Bars based on only a few hits can be misleading; hover over a bar, or tap it, to see how many hits it rests on. Light bars rest on fewer than 20 hits.</p>
   <h3>Typing labels</h3>
   <p>While you type the label of a line (the first <code>#</code> part), a letter with special forms brings up a small row of them: <code>t</code> offers t, ṭ, ṯ, ŧ; <code>a</code> ā, á, ã; <code>d</code> ḍ, ḏ; <code>g</code> ġ; <code>h</code> ḥ, ḫ; <code>i</code> ī; <code>s</code> ṣ, š; <code>u</code> ū; <code>z</code> ẓ; the apostrophe <code>'</code> ʿ, ʾ. Tap one, or press Tab to step through them, and keep typing. Items, after the second <code>#</code>, are not changed.</p>
   <h3>Transliteration and Arabic input</h3>

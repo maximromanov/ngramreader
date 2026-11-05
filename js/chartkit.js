@@ -160,7 +160,7 @@ function valueAxis(scale, values, width) {
   if (scale === 'score') return { tickformat: '.2f', range: [0, (max || 1) * 1.14], nticks: 6 }
   return { tickformat: ',d', range: [0, (max || 1) * 1.14], ...(max <= 6 ? { dtick: 1 } : { nticks: 7 }) }   // count
 }
-// series: [{ name, index, values, hover, text }], values in the order of types; a null or (ratio) zero value draws no bar
+// series: [{ name, index, values, hover, text, faint }], values in the order of types; faint: bars in a lighter tone; a null or (ratio) zero value draws no bar
 export async function typeBars(el, { types, series, separate = false, scale = 'share', xTitle = '', caption, filename }) {
   const n = series.length, cats = types.map(t => (narrow() ? shortType(t) : t)), ratio = scale === 'ratio', cols = separate ? n : 1
   const shown = series.flatMap(s => s.values).filter(v => v !== null && v !== undefined && (!ratio || v > 0))
@@ -177,7 +177,7 @@ export async function typeBars(el, { types, series, separate = false, scale = 's
     layout[name] = { ...axis, ...(separate ? { domain: [k * (w + gap), k * (w + gap) + w], anchor: 'y' } : {}) }
     if (ratio) layout.shapes.push(...(separate || i === 0 ? [{ type: 'line', xref: ref, yref: 'paper', x0: 0, x1: 0, y0: 0, y1: 1, layer: 'above', line: { color: INK, width: 1 } }] : []))
     if (separate) layout.annotations.push({ text: `<b>${fit(s.name)}</b>`, showarrow: false, xref: 'paper', yref: 'paper', x: k * (w + gap), y: 1, yshift: 4, xanchor: 'left', yanchor: 'bottom', align: 'left', font: { size: panelW < 110 ? 11 : 13, color: st.color } })
-    return { type: 'bar', orientation: 'h', name: s.name, xaxis: ref, y: cats, x: s.values.map(v => (ratio ? (v > 0 ? Math.log10(v) : null) : v)), marker: barMarker(s.index, separate || n === 1), customdata: s.hover, hovertemplate: '%{customdata}<extra>%{y}</extra>',
+    return { type: 'bar', orientation: 'h', name: s.name, xaxis: ref, y: cats, x: s.values.map(v => (ratio ? (v > 0 ? Math.log10(v) : null) : v)), marker: { ...barMarker(s.index, separate || n === 1), ...(s.faint ? { opacity: s.faint.map(f => (f ? 0.35 : 1)) } : {}) }, customdata: s.hover, hovertemplate: ratio ? '%{customdata}<extra></extra>' : '%{customdata}<extra>%{y}</extra>',
       ...(s.text ? { text: s.text, textposition: 'outside', cliponaxis: false, textfont: { size: 12, color: INK } } : {}) } })
   if (separate && n > 1) layout.annotations.push({ text: title, showarrow: false, xref: 'paper', yref: 'paper', x: 0.5, y: 0, yshift: ratio && panelW >= 170 ? -46 : -24, yanchor: 'top', font: { size: 12 } })
   else layout.xaxis.title = { text: title, font: { size: 12 } }

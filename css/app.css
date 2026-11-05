@@ -103,6 +103,10 @@ table.pivot td.num, table.pivot th.num { text-align: right; white-space: nowrap;
 #types-key { margin-top: 6px; }
 table.pivot td.num { border: 1px solid #fff; }
 .shaded { display: inline-block; padding: 1px 6px; border-radius: 3px; }
+.how { background: var(--soft); border-radius: 6px; padding: 8px 14px; margin: 0 0 10px; max-width: 78ch; }
+.how summary { cursor: pointer; font-weight: 600; }
+.how p, .how ul { margin: 6px 0; }
+.how ul { padding-left: 20px; }
 .tbl-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 4px 0 6px; }
 .tbl-filter { font-size: calc(13px + var(--fd)); padding: 4px 8px; flex: 1 1 200px; min-width: 0; max-width: 360px; }
 sup.uncertain { color: var(--muted); cursor: help; margin-left: 2px; }

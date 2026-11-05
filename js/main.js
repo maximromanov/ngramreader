@@ -262,24 +262,25 @@ const typeName = t => t.replace(/^\[.+?\]\s*/, '')
 const comparedRows = R => (R.compared ??= compsCompared(S.P, R.mode, R.compsTotalGraph))
 const typeLines = R => R.lines.filter(l => R.compsTotalGraph.some(r => r.label === l.label))
 const pct = v => `${(v * 100).toFixed(1)}%`
+const FEW_HITS = 20     // Compared with corpus: bars resting on fewer hits are drawn light
 const typesOf = rows => [...new Set(rows.map(r => r.compsFinal))].sort(byType)
 // table shading: the colour of the search line, darker for a larger value; each line on its own scale
 const shade = (v, max, l) => (v > 0 && max > 0 ? `background:rgba(${styleOf(l.index).rgb},${(0.62 * Math.sqrt(v / max)).toFixed(3)})` : '')
 async function drawTypes() {
   const R = S.results, V = S.view, stem = fileStem(), radar = V.tchart === 'radar', vs = !radar && V.tmeasure === 'corpus', lines = typeLines(R)
-  $('#chart-radar').hidden = !radar; $('#chart-typebars').hidden = radar
+  $('#chart-radar').hidden = !radar; $('#chart-typebars').hidden = radar; $('#how-compared').hidden = !vs
   const base = `${corpusLine(R)} Book types from a classifier of the OpenITI texts.`
   if (radar) await radarChart($('#chart-radar'), R.compsTotalGraph, lines, { filename: `${stem}_booktypes_radar`, caption: { title: 'Distribution of hits over book types (share of hits)', subtitle: searchCaption(R), note: base, footer: footer() } })
   else {
     const rows = comparedRows(R), order = typesOf(rows), at = new Map(rows.map(r => [r.label + '\u0000' + r.compsFinal, r]))
     const series = lines.map(l => { const rs = order.map(t => at.get(l.label + '\u0000' + t))
-      return { name: labelIt(l), index: l.index, values: rs.map(r => (vs ? r.ratio : r.share)),
-        hover: rs.map(r => `${esc(l.userLabel)}: ${vs ? `${r.ratio === null ? 'n/a' : `${r.ratio.toFixed(2)}×`} (${pct(r.share)} of hits, ${pct(r.corpusShare)} of corpus tokens)` : `${pct(r.share)} of hits (${r.ngramCount.toLocaleString('en')})`}`) } })
+      return { name: labelIt(l), index: l.index, values: rs.map(r => (vs ? r.ratio : r.share)), ...(vs ? { faint: rs.map(r => r.ngramCount < FEW_HITS) } : {}),
+        hover: rs.map(r => (vs ? `${esc(r.compsFinal)} — ${esc(l.userLabel)}<br>${r.ngramCount.toLocaleString('en')} of ${r.lineHits.toLocaleString('en')} hits (${pct(r.share)}) · ${pct(r.corpusShare)} of corpus tokens<br>${r.ratio === null ? 'n/a' : `${r.ratio.toFixed(2)}×`} as expected` : `${esc(l.userLabel)}: ${pct(r.share)} of hits (${r.ngramCount.toLocaleString('en')})`)) } })
     const ties = ' A book tied between two types counts under both.'
     await typeBars($('#chart-typebars'), { types: order, series, separate: V.tlayout === 'separate', scale: vs ? 'ratio' : 'share', xTitle: vs ? 'share of hits ÷ share of corpus tokens (log scale)' : 'share of hits',
       filename: `${stem}_booktypes_${vs ? 'vs_corpus' : 'share'}_${V.tlayout}`,
       caption: { title: vs ? 'Hits by book type compared with the corpus' : 'Distribution of hits over book types (share of hits)', subtitle: searchCaption(R), footer: footer(),
-        note: `${base}${vs ? ` Each bar: the line's share of hits in the type divided by the type's share of the corpus tokens. At 1× a type has the hits its size predicts; no bar: no hits.${ties}` : ` Types in alphabetical order.${ties}`}` } })
+        note: `${base}${vs ? ` Each bar: the line's share of hits in the type divided by the type's share of the corpus tokens. 1× = as expected from the type's share of the corpus; 2× = twice as frequent; 0.5× = half as frequent. Light bars rest on fewer than ${FEW_HITS} hits. No bar: no hits.${ties}` : ` Types in alphabetical order.${ties}`}` } })
   }
   drawTypesTable()
 }
@@ -328,7 +329,7 @@ const TABLES = {
   chronoTable: R => [R.chronoTable, CHRONO_TABLE_COLS],
   booksTable: R => [withBookLabels(R.booksTable), [...BOOK_COLS.slice(0, 3), 'labelUncertain', ...BOOK_COLS.slice(3)]],
   authorsTable: R => [withAuthorLabels(R.authorsTable), AUTHOR_COLS],
-  compsTotalGraph: R => [comparedRows(R), ['label', 'compsFinal', 'ngramCount', 'percentage', 'corpusTokens', 'corpusShare', 'ratio']],
+  compsTotalGraph: R => [comparedRows(R), ['label', 'compsFinal', 'ngramCount', 'lineHits', 'percentage', 'corpusTokens', 'corpusShare', 'ratio']],
   compsPeriodsGraph: R => [R.compsPeriodsGraph, ['label', 'compsFinal', 'order', 'periods', 'freqsNorm']],
   bookData: R => [R.bookData, ['ID', 'label', 'ngramTR', 'ngram', 'count', 'bookURI']],
   corpusSize: R => [PERIODS_PLOT.map(p => ({ period: p, tokens: S.P.modes[R.mode].periodTokens.get(p) ?? 0 })), ['period', 'tokens']],
@@ -341,7 +342,7 @@ const DESCRIPTIONS = {
   chronoTable: 'per form, counts per century (columns 100 ... 1400 = century end, AH; century 100 includes periods 25-100), with totals per search and per form.',
   booksTable: 'per search line and book: Book = readable title and author (working label, *italics* markup), Arabic = Arabic title, labelUncertain = 1 if the label is uncertain; count, count / book length, book length, book type (compsFinal, compsValue, compsPrelim), matched forms; URL = the text at the OpenITI release.',
   authorsTable: "per search line and author: Author = readable name (working label), Arabic = Arabic name; count, count / tokTotal (all of the author's books in the selected corpus), matched forms.",
-  compsTotalGraph: 'per search line, hits by book type and their share (the bars and the radar); corpusTokens = tokens of the selected corpus in the type (a tied book counts under both of its types, as its hits do), corpusShare = their share of the corpus, ratio = unrounded share of hits / corpusShare (the Compared with corpus view).',
+  compsTotalGraph: 'per search line, hits by book type (ngramCount; lineHits = all hits of the line) and their share (the bars and the radar); corpusTokens = tokens of the selected corpus in the type (a tied book counts under both of its types, as its hits do), corpusShare = their share of the corpus, ratio = unrounded share of hits / corpusShare (the Compared with corpus view).',
   compsPeriodsGraph: 'per search line, book type and period, counts normalised by the largest period count of the search (book types over time).',
 }
 async function downloadAll() {
@@ -403,6 +404,9 @@ function switches() {
   $('#sw-value').onclick = e => { const b = e.target.closest('button'); if (b) { S.view.value = b.dataset.v; apply() } }
   $('#sw-layout').onclick = e => { const b = e.target.closest('button'); if (b) { S.view.layout = b.dataset.v; apply() } }
   for (const [h, k] of [['#sw-tchart', 'tchart'], ['#sw-tlayout', 'tlayout'], ['#sw-tmeasure', 'tmeasure']]) $(h).onclick = e => { const b = e.target.closest('button'); if (b) { S.view[k] = b.dataset.v; apply() } }
+  { const how = $('#how-compared')      // the reader's choice to collapse the explanation, kept in this browser
+    try { how.open = localStorage.getItem('ngr-how-compared') !== 'closed' } catch {}
+    how.ontoggle = () => { try { localStorage.setItem('ngr-how-compared', how.open ? 'open' : 'closed') } catch {} } }
   $('#sw-corpus').onchange = () => { S.view.corpus = $('#sw-corpus').checked; apply() }
   paint()
 }
