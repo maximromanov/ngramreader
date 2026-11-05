@@ -16,37 +16,18 @@
           "highlight": "#lines .line input"
         },
         {
-          "title": "Over time",
-          "text": "*Tasalṭana* means “to become sultan”. The curve shows its share of all words in each 25-year period.\nIt is almost absent until the eighth century AH, well into the Mamlūk period, and peaks in the ninth century AH.",
-          "state": {
-            "l": [
-              "#Tasalṭana #\\w*tslTn\\w*"
-            ],
-            "panel": "closed"
-          }
-        },
-        {
-          "title": "Raw counts and corpus size",
-          "text": "These are the raw counts. The grey bars show how much text the corpus holds for each period.\nA rise can simply mean more surviving texts — which is why the relative view is the default.",
-          "state": {
-            "l": [
-              "#Tasalṭana #\\w*tslTn\\w*"
-            ],
-            "r": 0,
-            "k": 1,
-            "panel": "closed"
-          }
-        },
-        {
           "title": "The forms found",
-          "text": "`\\w*` means “any letters”, so the search catches every form built on *tslTn*: *tasalṭana*, *wa-tasalṭana*, *yatasalṭanu*, and also *al-mutasalṭin*.\nThe list in the panel shows each form with its count.",
+          "text": "`\\w*` means “any letters”, so the search catches every form built on *tslTn*: *tasalṭana*, *wa-tasalṭana*, *yatasalṭanu*, and also *al-mutasalṭin*.\nThis list is where you select the forms: tick or untick each one, or use *tick all* and *untick all*.",
           "state": {
             "l": [
               "#Tasalṭana #\\w*tslTn\\w*"
             ],
             "panel": "open"
           },
-          "highlight": "#preview table.pv-list"
+          "highlight": [
+            "#preview table.pv-list",
+            "#preview .pv-tools button"
+          ]
         },
         {
           "title": "Untick a form",
@@ -63,6 +44,33 @@
           "highlight": "#preview tr:has(input[aria-label=\"tick AlmtslTn\"])"
         },
         {
+          "title": "Over time",
+          "text": "*Tasalṭana* means “to become sultan”. The curve shows its share of all words in each 25-year period.\nIt is almost absent until the eighth century AH, well into the Mamlūk period, and peaks in the ninth century AH.",
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "panel": "closed"
+          },
+          "highlight": "#chart-time"
+        },
+        {
+          "title": "Raw counts and corpus size",
+          "text": "These are the raw counts. The grey bars show how much text the corpus holds for each period.\nA rise can simply mean more surviving texts — which is why the relative view is the default.",
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "r": 0,
+            "k": 1,
+            "panel": "closed"
+          },
+          "highlight": [
+            "#sw-value",
+            "label:has(#sw-corpus)"
+          ]
+        },
+        {
           "title": "Books",
           "text": "Which books use the word, and how often. A handful of works account for much of it.",
           "state": {
@@ -71,7 +79,11 @@
             ],
             "t": "books",
             "panel": "closed"
-          }
+          },
+          "highlight": [
+            "#tbl-books tbody tr:nth-child(-n+3)",
+            "#tabs [data-tab=books]"
+          ]
         },
         {
           "title": "Authors",
@@ -82,7 +94,11 @@
             ],
             "t": "authors",
             "panel": "closed"
-          }
+          },
+          "highlight": [
+            "#tbl-authors tbody tr:first-child",
+            "#tabs [data-tab=authors]"
+          ]
         },
         {
           "title": "Book types, compared with corpus",
@@ -94,7 +110,11 @@
             "t": "types",
             "e": 1,
             "panel": "closed"
-          }
+          },
+          "highlight": [
+            "#how-compared",
+            "#sw-tmeasure"
+          ]
         },
         {
           "title": "Your turn",
@@ -110,7 +130,12 @@
             "label": "Continue with the Book Classifier tour →",
             "app": "classifier",
             "tour": "nujum"
-          }
+          },
+          "highlight": [
+            "#tbl-books tbody tr:first-child td:nth-child(2)",
+            "#copy-link",
+            "#cite"
+          ]
         }
       ]
     }

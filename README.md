@@ -106,7 +106,7 @@ Tours are data: `tours/tours.json`. Editing or adding a tour needs no change to 
 
 - `text`, `title`: `*…*` is italics, `` `…` `` is code, `\n` starts a new paragraph. In JSON a backslash is written twice (`\\w*`).
 - `continue` (optional): a link to a tour of the other app, opened in a new tab.
-- `highlight` (optional): a CSS selector; the element gets a ring while the stop is open, e.g. `"#lines .line input"`.
+- `highlight` (optional): a CSS selector, or a list of them with the main one first; these elements get a blinking frame while the stop is open, e.g. `"#lines .line input"`. Removing it removes the frame.
 - `state`: the view the stop opens, through the same code as a link. `panel` is `"open"` or `"closed"`.
 - `state` keys: `l` search lines (array), `x` unticked forms per line, `m: "a"` all texts, `s` smoothing span, `t` tab (`time`, `types`, `typestime`, `century`, `books`, `authors`), `r: 0` absolute values, `p: 1` Separate on Over time, `k: 1` corpus size on, `a: 2` proportion 1:2, `q: 1` classic radar, `y: 1` Separate on Book types, `e: 1` Compared with corpus. Keys left out take the default.
 

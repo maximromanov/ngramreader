@@ -18,9 +18,13 @@ export function createTours({ open, links = {} }) {
     const c = card.getBoundingClientRect(), chart = document.querySelector('[data-pane]:not([hidden]) .js-plotly-plot:not([hidden])'); if (!chart) return
     const hit = [...chart.querySelectorAll('.annotation-text')].map(a => a.getBoundingClientRect()).filter(r => r.height && r.top < innerHeight && r.bottom > c.top && r.left < c.right && r.right > c.left)
     if (hit.length) scrollBy(0, Math.max(...hit.map(r => r.bottom)) - c.top + 10) }
-  // an optional ring around one real element of the page (the stop's "highlight": a CSS selector)
-  const spot = sel => { document.querySelectorAll('.tour-spot').forEach(e => e.classList.remove('tour-spot')); const el = sel && document.querySelector(sel); if (!el) return
-    el.classList.add('tour-spot'); el.scrollIntoView({ block: phone() ? 'center' : 'nearest' }) }
+  // blinking frames around real elements of the page (the stop's "highlight": a CSS selector, or a list of them, the main one first);
+  // the page scrolls so that the first of them is in view and not behind the card
+  const spot = sel => { document.querySelectorAll('.tour-spot').forEach(e => e.classList.remove('tour-spot'))
+    const els = [].concat(sel ?? []).flatMap(s => [...document.querySelectorAll(s)]); els.forEach(e => e.classList.add('tour-spot')); const el = els[0]; if (!el || !card) return
+    const room = phone() ? card.getBoundingClientRect().top : innerHeight, tall = el.getBoundingClientRect().height > room * 0.6
+    if (phone()) el.scrollIntoView({ block: tall ? 'start' : 'center', inline: 'nearest' })
+    else if (!tall) { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); const r = el.getBoundingClientRect(), c = card.getBoundingClientRect(); if (r.bottom > c.top - 8 && r.top < c.bottom && r.left < c.right && r.right > c.left) scrollBy(0, r.bottom - c.top + 14) } }
   const paint = () => { const s = tour.stops[stop], n = tour.stops.length, last = stop === n - 1, more = s.continue
     card.innerHTML = `<button type="button" class="tour-x" aria-label="Close the tour" title="Close the tour (Esc)">×</button>${last ? '' : '<button type="button" class="tour-skip">Skip the tour</button>'}
       <p class="tour-name">${inline(tour.title)}</p><h3>${inline(s.title)}</h3>
