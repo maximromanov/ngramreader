@@ -129,7 +129,7 @@
           "continue": {
             "label": "Continue with the Book Classifier tour →",
             "app": "classifier",
-            "tour": "nujum"
+            "tour": "talbis"
           },
           "highlight": [
             "#tbl-books tbody tr:first-child td:nth-child(2)",
