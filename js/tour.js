@@ -18,23 +18,26 @@ export function createTours({ open, links = {} }) {
     const c = card.getBoundingClientRect(), chart = document.querySelector('[data-pane]:not([hidden]) .js-plotly-plot:not([hidden])'); if (!chart) return
     const hit = [...chart.querySelectorAll('.annotation-text')].map(a => a.getBoundingClientRect()).filter(r => r.height && r.top < innerHeight && r.bottom > c.top && r.left < c.right && r.right > c.left)
     if (hit.length) scrollBy(0, Math.max(...hit.map(r => r.bottom)) - c.top + 10) }
+  // an optional ring around one real element of the page (the stop's "highlight": a CSS selector)
+  const spot = sel => { document.querySelectorAll('.tour-spot').forEach(e => e.classList.remove('tour-spot')); const el = sel && document.querySelector(sel); if (!el) return
+    el.classList.add('tour-spot'); el.scrollIntoView({ block: phone() ? 'center' : 'nearest' }) }
   const paint = () => { const s = tour.stops[stop], n = tour.stops.length, last = stop === n - 1, more = s.continue
-    card.innerHTML = `<button type="button" class="tour-x" aria-label="Close the tour" title="Close the tour (Esc)">×</button>
+    card.innerHTML = `<button type="button" class="tour-x" aria-label="Close the tour" title="Close the tour (Esc)">×</button>${last ? '' : '<button type="button" class="tour-skip">Skip the tour</button>'}
       <p class="tour-name">${inline(tour.title)}</p><h3>${inline(s.title)}</h3>
       <div class="tour-text">${s.text.split('\n').map(p => `<p>${inline(p)}</p>`).join('')}</div>
       ${more ? `<p class="tour-more"><a href="${esc(`${links[more.app]}?tour=${encodeURIComponent(more.tour)}&stop=1`)}" target="_blank" rel="noopener">${inline(more.label)}</a></p>` : ''}
       <div class="tour-foot"><button type="button" data-go="-1" ${stop ? '' : 'disabled'}>‹ Back</button><span class="tour-dots" aria-hidden="true">${tour.stops.map((_, i) => `<i class="${i === stop ? 'on' : ''}"></i>`).join('')}</span><span class="tour-n">${stop + 1} of ${n}</span><button type="button" data-go="1" class="primary">${last ? 'Close' : 'Next ›'}</button></div>`
-    card.querySelector('.tour-x').onclick = close
+    card.querySelector('.tour-x').onclick = close; if (!last) card.querySelector('.tour-skip').onclick = close
     card.querySelectorAll('[data-go]').forEach(b => { b.onclick = () => step(Number(b.dataset.go)) }) }
   async function go(n) {
-    if (moving) return; moving = true; stop = n; paint(); card.setAttribute('aria-busy', 'true')
+    if (moving) return; moving = true; stop = n; paint(); spot(null); card.setAttribute('aria-busy', 'true')
     const u = new URL(location.href); u.searchParams.set('tour', tour.id); u.searchParams.set('stop', n + 1); history.replaceState(null, '', u)
-    try { scrollTo(0, 0); await open(tour.stops[n].state); place(); await new Promise(r => setTimeout(r, 60)); clearCaption() } finally { moving = false; card?.removeAttribute('aria-busy') }
+    try { scrollTo(0, 0); await open(tour.stops[n].state); place(); await new Promise(r => setTimeout(r, 60)); spot(tour.stops[n].highlight); clearCaption() } finally { moving = false; card?.removeAttribute('aria-busy') }
   }
   const step = d => { if (moving) return; const n = stop + d; if (n >= tour.stops.length) return close(); if (n >= 0) go(n) }
   const key = e => { if (document.querySelector('dialog[open]') || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return
     if (e.key === 'ArrowRight') step(1); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'Escape') close() }
-  function close() { card?.remove(); card = null; tour = null; document.body.classList.remove('touring'); removeEventListener('keydown', key); removeEventListener('resize', place); history.replaceState(null, '', cleanLink()) }
+  function close() { spot(null); card?.remove(); card = null; tour = null; document.body.classList.remove('touring'); removeEventListener('keydown', key); removeEventListener('resize', place); history.replaceState(null, '', cleanLink()) }
   async function start(id, n = 1) {
     let found; try { found = (await load()).find(t => t.id === id) } catch (e) { console.warn('tours not loaded:', e) }
     if (!found) { history.replaceState(null, '', cleanLink()); return false }

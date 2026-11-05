@@ -5,40 +5,112 @@
       "title": "*Tasalṭana*, the verb of sultans",
       "stops": [
         {
+          "title": "Where to type",
+          "text": "Type your search in this box, in the panel on the left: a label, then the word forms. Here the label is *Tasalṭana* and `\\w*tslTn\\w*` is the search. Arabic letters work too.\nThen press *Search*.",
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "panel": "open"
+          },
+          "highlight": "#lines .line input"
+        },
+        {
           "title": "Over time",
           "text": "*Tasalṭana* means “to become sultan”. The curve shows its share of all words in each 25-year period.\nIt is almost absent until the eighth century AH, well into the Mamlūk period, and peaks in the ninth century AH.",
-          "state": { "l": ["#Tasalṭana #\\w*tslTn\\w*"], "panel": "closed" }
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "panel": "closed"
+          }
         },
         {
           "title": "Raw counts and corpus size",
           "text": "These are the raw counts. The grey bars show how much text the corpus holds for each period.\nA rise can simply mean more surviving texts — which is why the relative view is the default.",
-          "state": { "l": ["#Tasalṭana #\\w*tslTn\\w*"], "r": 0, "k": 1, "panel": "closed" }
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "r": 0,
+            "k": 1,
+            "panel": "closed"
+          }
         },
         {
           "title": "The forms found",
-          "text": "`\\w*` means “any letters”, so the search catches every form built on *tslTn*: *tasalṭana*, *wa-tasalṭana*, *yatasalṭanu*, and also *al-mutasalṭin*.\nUntick any form you don't want and press *Update results*, and every chart and table follows.",
-          "state": { "l": ["#Tasalṭana #\\w*tslTn\\w*"], "panel": "open" }
+          "text": "`\\w*` means “any letters”, so the search catches every form built on *tslTn*: *tasalṭana*, *wa-tasalṭana*, *yatasalṭanu*, and also *al-mutasalṭin*.\nThe list in the panel shows each form with its count.",
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "panel": "open"
+          },
+          "highlight": "#preview table.pv-list"
+        },
+        {
+          "title": "Untick a form",
+          "text": "Each form has a tick box. Here *al-mutasalṭin* is unticked, so the results now count 11 of the 12 forms.\nUntick any form you don't want and press *Update results*, and every chart and table follows.",
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "x": {
+              "0": "4q9m"
+            },
+            "panel": "open"
+          },
+          "highlight": "#preview tr:has(input[aria-label=\"tick AlmtslTn\"])"
         },
         {
           "title": "Books",
           "text": "Which books use the word, and how often. A handful of works account for much of it.",
-          "state": { "l": ["#Tasalṭana #\\w*tslTn\\w*"], "t": "books", "panel": "closed" }
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "t": "books",
+            "panel": "closed"
+          }
         },
         {
           "title": "Authors",
           "text": "Roughly a third of all uses are in the works of Ibn Taġrībirdī (d. 874/1470).",
-          "state": { "l": ["#Tasalṭana #\\w*tslTn\\w*"], "t": "authors", "panel": "closed" }
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "t": "authors",
+            "panel": "closed"
+          }
         },
         {
           "title": "Book types, compared with corpus",
           "text": "Is the word typical of a kind of book? Chronicles use it far more than their share of the corpus predicts.\nThe box above the chart explains how to read it.",
-          "state": { "l": ["#Tasalṭana #\\w*tslTn\\w*"], "t": "types", "e": 1, "panel": "closed" }
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "t": "types",
+            "e": 1,
+            "panel": "closed"
+          }
         },
         {
           "title": "Your turn",
           "text": "Click any book or author to open its profile in the Book Classifier.\nUse “Copy link” or “Cite these results” to keep exactly this view.",
-          "state": { "l": ["#Tasalṭana #\\w*tslTn\\w*"], "t": "books", "panel": "closed" },
-          "continue": { "label": "Continue with the Book Classifier tour →", "app": "classifier", "tour": "nujum" }
+          "state": {
+            "l": [
+              "#Tasalṭana #\\w*tslTn\\w*"
+            ],
+            "t": "books",
+            "panel": "closed"
+          },
+          "continue": {
+            "label": "Continue with the Book Classifier tour →",
+            "app": "classifier",
+            "tour": "nujum"
+          }
         }
       ]
     }

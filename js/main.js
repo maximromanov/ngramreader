@@ -408,6 +408,7 @@ async function openStop({ panel, ...packed }) {
   document.querySelector(`input[name=mode][value=${st.mode}]`).checked = true; $('#span').value = st.span; $('#span-val').textContent = st.span <= 0.1 ? 'none' : st.span
   if (same) { await updateURL(); await renderResults() }
   else { $('#lines').innerHTML = ''; st.lines.forEach(l => addLine(l)); await runSearch({ excluded }) }
+  if (panel) UI.fold(panel === 'closed')      // again: a new search folds the panel on small screens
 }
 const TOURS = createTours({ open: openStop, links: { classifier: classifierURL() } })
 function switches() {
