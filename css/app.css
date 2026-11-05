@@ -103,7 +103,7 @@ table.pivot td.num, table.pivot th.num { text-align: right; white-space: nowrap;
 #types-key { margin-top: 6px; }
 table.pivot td.num { border: 1px solid #fff; }
 .shaded { display: inline-block; padding: 1px 6px; border-radius: 3px; }
-.how { background: var(--soft); border-radius: 6px; padding: 8px 14px; margin: 0 0 10px; max-width: 78ch; }
+.how { background: var(--soft); border-radius: 6px; padding: 8px 14px; margin: 0 0 10px; }
 .how summary { cursor: pointer; font-weight: 600; }
 .how p, .how ul { margin: 6px 0; }
 .how ul { padding-left: 20px; }
