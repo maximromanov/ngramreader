@@ -1,7 +1,7 @@
 // NgramReader charts, drawn with the shared chart kit (chartkit.js): style, in-chart captions, exports.
 import { PERIODS_PLOT } from './compute.js'
 import { smoothSeries } from './loess.js'
-import { plot, styleOf, narrow, byType, GRID, AXIS, MUTED } from './chartkit.js'
+import { plot, styleOf, narrow, byType, typeLabel, GRID, AXIS, MUTED } from './chartkit.js'
 
 const AH2CE = ah => Math.round(ah - ah / 33 + 622)                       // R app: AH2CE()
 const TICKS = Array.from({ length: 14 }, (_, i) => 100 * (i + 1))
@@ -9,6 +9,8 @@ const timeTicks = step => { const t = TICKS.filter(x => x % step === 0); return 
 // fewer two-line labels where 14 do not fit: on phones (every 300 years) and in the Paper export (every 200)
 const timeAxis = (extra = {}) => ({ ...timeTicks(narrow() ? 300 : 100), tickmode: 'array', tickangle: 0, showgrid: false, linecolor: AXIS, range: [85, 1415], ...extra })
 const PAPER_TICKS = { paper: L => ({ ...L, xaxis: { ...L.xaxis, ...timeTicks(200) } }) }
+// percent ticks with as many decimals as the values need: rare words would otherwise read 0.001%, 0.001%, 0.000%
+const percentFormat = values => { const max = Math.max(0, ...values.flat().filter(Number.isFinite)) * 100; return `.${max > 0 ? Math.max(3, Math.ceil(-Math.log10(max)) + 1) : 3}%` }
 const smoothText = span => (span <= 0.1 ? 'no smoothing' : `LOESS span ${span}`)
 export const axisTitle = (relative, span) => `${relative ? 'relative' : 'absolute'} frequency, ${smoothText(span)}`
 const corpusBars = (tokens, yaxis) => ({ type: 'bar', x: PERIODS_PLOT, y: tokens, yaxis, marker: { color: 'rgba(0,0,0,0.07)' }, width: 21, hovertemplate: '%{x} AH: %{y:,} tokens in the corpus<extra></extra>', showlegend: false })
@@ -19,8 +21,9 @@ export async function overTimeTogether(el, series, { relative, span, corpus, cap
   const yl = corpus ? 'y2' : 'y'
   series.forEach((s, i) => { const st = styleOf(s.index)
     traces.push({ x: PERIODS_PLOT, y: smoothSeries(PERIODS_PLOT, s.values, span), yaxis: yl, name: `<i>${s.userLabel}</i>`, type: 'scatter', mode: 'lines', line: { color: st.color, dash: st.dash, width: 2.4 },
-      hovertemplate: `${s.userLabel}: %{y${relative ? ':.4%' : ':,.0f'}} at %{x} AH<extra></extra>` }) })
-  const value = { title: { text: axisTitle(relative, span), font: { size: 12 } }, tickformat: relative ? '.3%' : ',', rangemode: 'tozero', gridcolor: GRID, zeroline: false, linecolor: AXIS }
+      hovertemplate: `${s.userLabel}: %{y${relative ? ':.5%' : ':,.0f'}} at %{x} AH<extra></extra>` }) })
+  const curves = series.map(s => smoothSeries(PERIODS_PLOT, s.values, span))
+  const value = { title: { text: axisTitle(relative, span), font: { size: 12 } }, ...(relative ? { tickformat: percentFormat(curves) } : { tickformat: ',.0f', tickmode: 'array', tickvals: countTicks(curves.flat(), 5) }), rangemode: 'tozero', gridcolor: GRID, zeroline: false, linecolor: AXIS }
   const layout = { aspect, exportPatch: PAPER_TICKS, margin: { l: 72, r: 16, b: 54 }, showlegend: series.length > 1, legendRoom: series.length > 1 ? (narrow() ? Math.ceil(series.length / 2) : 1) : 0, legend: { orientation: 'h', x: 0, y: 1, yanchor: 'bottom', font: { size: 13 } }, hovermode: 'closest', xaxis: timeAxis(), barmode: 'overlay' }
   if (corpus) { layout.yaxis = { visible: false, rangemode: 'tozero', fixedrange: true }; layout.yaxis2 = { ...value, overlaying: 'y', side: 'left' } } else layout.yaxis = value
   await plot(el, traces, layout, caption, filename)
@@ -50,11 +53,11 @@ export async function overTimeSeparate(el, panels, { span, corpus, caption, file
     layout[xName(i)] = timeAxis({ anchor: ref(a), ...(i ? { matches: 'x' } : {}) })      // every panel has its time labels; zooming one zooms all
     if (corpus) traces.push({ ...corpusBars(corpus, ref(c)), xaxis: x })
     traces.push({ type: 'bar', x: PERIODS_PLOT, y: p.absolute, xaxis: x, yaxis: ref(a), width: 21, marker: { color: `rgba(${st.rgb},0.24)` }, hovertemplate: `${p.userLabel}: %{y:,} occurrences at %{x} AH<extra></extra>` })
-    traces.push({ type: 'scatter', mode: 'lines', x: PERIODS_PLOT, y: smoothSeries(PERIODS_PLOT, p.relative, span), xaxis: x, yaxis: ref(b), line: { color: st.color, dash: st.dash, width: 2.4 }, hovertemplate: `${p.userLabel}: %{y:.4%} at %{x} AH<extra></extra>` })
+    traces.push({ type: 'scatter', mode: 'lines', x: PERIODS_PLOT, y: smoothSeries(PERIODS_PLOT, p.relative, span), xaxis: x, yaxis: ref(b), line: { color: st.color, dash: st.dash, width: 2.4 }, hovertemplate: `${p.userLabel}: %{y:.5%} at %{x} AH<extra></extra>` })
     layout[name(c)] = { domain: dom, visible: false, rangemode: 'tozero', fixedrange: true, anchor: x }
     layout[name(a)] = { domain: dom, overlaying: corpus ? ref(c) : undefined, side: 'left', anchor: x, rangemode: 'tozero', tickformat: ',.0f', tickmode: 'array', tickvals: countTicks(p.absolute, 4), gridcolor: GRID, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: MUTED }, title: { text: 'absolute', font: { size: 12, color: MUTED } } }
     if (!corpus) delete layout[name(a)].overlaying
-    layout[name(b)] = { domain: dom, overlaying: corpus ? ref(c) : ref(a), side: 'right', anchor: x, rangemode: 'tozero', tickformat: '.3%', showgrid: false, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: st.color }, title: { text: 'relative', font: { size: 12, color: st.color } } }
+    layout[name(b)] = { domain: dom, overlaying: corpus ? ref(c) : ref(a), side: 'right', anchor: x, rangemode: 'tozero', tickformat: percentFormat([smoothSeries(PERIODS_PLOT, p.relative, span)]), showgrid: false, zeroline: false, linecolor: AXIS, tickfont: { size: 12, color: st.color }, title: { text: 'relative', font: { size: 12, color: st.color } } }
     layout.annotations.push({ text: `<b><i>${p.userLabel}</i></b>  ${p.detail}`, showarrow: false, xref: 'paper', yref: 'paper', x: 0, y: dom[1], xshift: 8 - layout.margin.l, yshift: LABEL_LIFT, xanchor: 'left', yanchor: 'bottom', align: 'left', font: { size: 13, color: st.color } })
   })
   await plot(el, traces, layout, caption, filename)
@@ -66,7 +69,7 @@ export async function radarChart(el, compsTotal, lines, { caption, filename }) {
   const byType = (a, b) => (a.compsFinal < b.compsFinal ? -1 : a.compsFinal > b.compsFinal ? 1 : 0)     // code-point order, as in the classifier
   const axis = c => (narrow() ? c.replace(/ /g, '<br>').replace(/-/g, '-<br>') : c)                      // long names wrap on phones
   const layers = lines.map(L => { const rows = compsTotal.filter(r => r.label === L.label).sort(byType), st = styleOf(L.index)
-    return { type: 'scatterpolar', r: rows.map(x => x.percentage), theta: rows.map(x => axis(x.compsFinal)), name: `<i>${L.userLabel}</i>`, fill: 'toself', fillcolor: `rgba(${st.rgb},0.3)`,
+    return { type: 'scatterpolar', r: rows.map(x => x.percentage), theta: rows.map(x => axis(typeLabel(x.compsFinal))), name: `<i>${L.userLabel}</i>`, fill: 'toself', fillcolor: `rgba(${st.rgb},0.3)`,
       line: { color: st.color, dash: st.dash, width: 2 }, marker: { color: st.color, size: 6 }, mode: 'lines+markers', hovertemplate: `%{theta}: %{r:.4f}<extra>${L.userLabel}</extra>` } }).filter(t => t.r.length > 1)
   const theta = layers[0]?.theta ?? []
   await plot(el, [ring(theta, 0.8, 0.2), ring(theta, 0.6, 0.4), ring(theta, 0.4, 0.6), ...layers], {
@@ -86,8 +89,8 @@ export async function typesOverTimeChart(el, compsPeriods, L, globalMax, { capti
     const order = pos.get(t)
     traces.push({ x: rr.map(r => r.periods), y: rr.map(() => order), type: 'scatter', mode: 'lines', line: { width: 0.5, color: '#999' }, hoverinfo: 'skip', showlegend: false })
     traces.push({ x: rr.map(r => r.periods), y: rr.map(r => order + (globalMax ? r.freqsNorm / globalMax : 0)), type: 'scatter', mode: 'lines',
-      fill: 'tonexty', fillcolor: `rgba(${st.rgb},0.45)`, line: { color: st.color, width: 1 }, name: t, showlegend: false, text: rr.map(r => `${t}<br>${r.periods} AH: ${r.freqsNorm.toPrecision(3)}`), hoverinfo: 'text' })
+      fill: 'tonexty', fillcolor: `rgba(${st.rgb},0.45)`, line: { color: st.color, width: 1 }, name: typeLabel(t), showlegend: false, text: rr.map(r => `${typeLabel(t)}<br>${r.periods} AH: ${r.freqsNorm.toPrecision(3)}`), hoverinfo: 'text' })
   }
   const ticks = types.map(t => [t, pos.get(t)])
-  await plot(el, traces, { exportPatch: PAPER_TICKS, margin: { l: narrow() ? 90 : 240, r: 16, b: 54 }, aspect, xaxis: timeAxis(), yaxis: { tickvals: ticks.map(t => t[1]), ticktext: ticks.map(t => (narrow() ? t[0].slice(0, 3) : t[0])), zeroline: false, showgrid: false, fixedrange: true, tickfont: { size: 12 } }, showlegend: false, hovermode: 'closest' }, caption, filename)
+  await plot(el, traces, { exportPatch: PAPER_TICKS, margin: { l: narrow() ? 90 : 240, r: 16, b: 54 }, aspect, xaxis: timeAxis(), yaxis: { tickvals: ticks.map(t => t[1]), ticktext: ticks.map(t => (narrow() ? typeLabel(t[0]).slice(0, 5) : typeLabel(t[0]))), zeroline: false, showgrid: false, fixedrange: true, tickfont: { size: 12 } }, showlegend: false, hovermode: 'closest' }, caption, filename)
 }

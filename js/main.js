@@ -4,9 +4,10 @@ import { validateLines } from './query.js'
 import { readByIds, loadStatic, loadLabels } from './data.js'
 import { prepare, compute, relative, PERIODS_PLOT, CENTURIES, compsCompared } from './compute.js'
 import { overTimeTogether, overTimeSeparate, radarChart, typesOverTimeChart } from './charts.js'
-import { redraw, exportBar, styleOf, arabic, typeBars, narrow, byType } from './chartkit.js'
+import { redraw, exportBar, styleOf, arabic, typeBars, narrow, byType, setTypeCodes, typeLabel } from './chartkit.js'
 import { panel, tabs, dialogs, citeDialog, copyText, fontControls } from './ui.js'
 import { translitInput } from './translit.js'
+import { createTours, tourQuery, cleanLink } from './tour.js'
 import { packState, unpackState } from './share.js'
 import { chartCitation } from './cite.js'
 import { renderTable, esc, fmt } from './tables.js'
@@ -122,6 +123,7 @@ async function computeAndRender() {
     status('Loading book metadata…')
     const st = await loadStatic(base); st.release = S.release.release
     S.P = prepare(st)
+    setTypeCodes(S.P.roll.map(r => [r.classLabel, st.compsLabels.find(l => l.class === r.class)?.abbrev ?? 'UND']))
   }
   const lines = S.previews.map(p => ({ label: p.line.label, userLabel: p.line.userLabel, regex: p.line.regex, index: p.line.index,
     ids: p.ids.filter(id => !p.excluded.has(id)) }))
@@ -257,7 +259,7 @@ async function drawTime() {
   }
 }
 // Book types: bars (Together or Separate; share of hits, or compared with the corpus) or the classic radar, with a table
-const typeCode = t => /^\[(.+?)\]/.exec(t)?.[1] ?? t
+const typeCode = t => /^\[(.+?)\]/.exec(typeLabel(t))?.[1] ?? t
 const typeName = t => t.replace(/^\[.+?\]\s*/, '')
 const comparedRows = R => (R.compared ??= compsCompared(S.P, R.mode, R.compsTotalGraph))
 const typeLines = R => R.lines.filter(l => R.compsTotalGraph.some(r => r.label === l.label))
@@ -275,7 +277,7 @@ async function drawTypes() {
     const rows = comparedRows(R), order = typesOf(rows), at = new Map(rows.map(r => [r.label + '\u0000' + r.compsFinal, r]))
     const series = lines.map(l => { const rs = order.map(t => at.get(l.label + '\u0000' + t))
       return { name: labelIt(l), index: l.index, values: rs.map(r => (vs ? r.ratio : r.share)), ...(vs ? { faint: rs.map(r => r.ngramCount < FEW_HITS) } : {}),
-        hover: rs.map(r => (vs ? `${esc(r.compsFinal)} — ${esc(l.userLabel)}<br>${r.ngramCount.toLocaleString('en')} of ${r.lineHits.toLocaleString('en')} hits (${pct(r.share)}) · ${pct(r.corpusShare)} of corpus tokens<br>${r.ratio === null ? 'n/a' : `${r.ratio.toFixed(2)}×`} as expected` : `${esc(l.userLabel)}: ${pct(r.share)} of hits (${r.ngramCount.toLocaleString('en')})`)) } })
+        hover: rs.map(r => (vs ? `${esc(typeLabel(r.compsFinal))} — ${esc(l.userLabel)}<br>${r.ngramCount.toLocaleString('en')} of ${r.lineHits.toLocaleString('en')} hits (${pct(r.share)}) · ${pct(r.corpusShare)} of corpus tokens<br>${r.ratio === null ? 'n/a' : `${r.ratio.toFixed(2)}×`} as expected` : `${esc(l.userLabel)}: ${pct(r.share)} of hits (${r.ngramCount.toLocaleString('en')})`)) } })
     const ties = ' A book tied between two types counts under both.'
     await typeBars($('#chart-typebars'), { types: order, series, separate: V.tlayout === 'separate', scale: vs ? 'ratio' : 'share', xTitle: vs ? 'share of hits ÷ share of corpus tokens (log scale)' : 'share of hits',
       filename: `${stem}_booktypes_${vs ? 'vs_corpus' : 'share'}_${V.tlayout}`,
@@ -291,11 +293,11 @@ function drawTypesTable() {
   const value = r => (vs ? r.ratio ?? 0 : r.share), top = new Map(); for (const r of rows) top.set(r.label, Math.max(top.get(r.label) ?? 0, value(r)))
   const lineOf = new Map(R.lines.map(l => [l.label, l]))
   if (narrow()) { const cell = (v, r) => `<span class="shaded" style="${shade(value(r), top.get(r.label), lineOf.get(r.label))}">${esc(fmt(v))}</span>`
-    key.innerHTML = ''; renderTable(host, [...rows].sort((a, b) => byType(a.compsFinal, b.compsFinal)), ['label', 'compsFinal', 'ngramCount', 'percentage', ...(vs ? ['corpusShare', 'ratio'] : [])], { render: vs ? { ratio: cell } : { percentage: cell } }); return }
+    key.innerHTML = ''; renderTable(host, [...rows].sort((a, b) => byType(a.compsFinal, b.compsFinal)), ['label', 'compsFinal', 'ngramCount', 'percentage', ...(vs ? ['corpusShare', 'ratio'] : [])], { render: { compsFinal: v => esc(typeLabel(v)), ...(vs ? { ratio: cell } : { percentage: cell }) } }); return }
   const order = typesOf(rows), at = new Map(rows.map(r => [r.label + '\u0000' + r.compsFinal, r]))
   const cell = r => { const v = vs ? (r.ngramCount ? `${r.ratio.toFixed(2)}×` : '–') : pct(r.share)
-    return `<td class="num" style="${shade(value(r), top.get(r.label), lineOf.get(r.label))}" title="${esc(r.compsFinal)}: ${r.ngramCount.toLocaleString('en')} hits, ${pct(r.share)}; corpus ${pct(r.corpusShare)}">${v}</td>` }
-  host.innerHTML = `<div class="table-scroll"><table class="pivot"><thead><tr><th>Search line</th>${order.map(t => `<th class="num" title="${esc(t)}">${esc(typeCode(t))}</th>`).join('')}</tr></thead>
+    return `<td class="num" style="${shade(value(r), top.get(r.label), lineOf.get(r.label))}" title="${esc(typeLabel(r.compsFinal))}: ${r.ngramCount.toLocaleString('en')} hits, ${pct(r.share)}; corpus ${pct(r.corpusShare)}">${v}</td>` }
+  host.innerHTML = `<div class="table-scroll"><table class="pivot"><thead><tr><th>Search line</th>${order.map(t => `<th class="num" title="${esc(typeLabel(t))}">${esc(typeCode(t))}</th>`).join('')}</tr></thead>
     <tbody>${typeLines(R).map(l => `<tr><td><i>${esc(l.userLabel)}</i></td>${order.map(t => cell(at.get(l.label + '\u0000' + t))).join('')}</tr>`).join('')}</tbody></table></div>`
   key.innerHTML = `${vs ? 'Share of hits ÷ share of corpus tokens. ' : 'Share of the line’s hits. '}Darker: larger within the line. ${order.map(t => `<b>${esc(typeCode(t))}</b> ${esc(typeName(t))}`).join(' · ')}`
 }
@@ -315,7 +317,7 @@ async function drawTab(id) {
     }
   } else if (id === 'century') { const lineOf = new Map(R.lines.map(l => [l.label, l]))
     renderTable($('#tbl-century'), R.chronoTable, CHRONO_TABLE_COLS, { rtl: ['ngram'], rowStyle: r => { const st = styleOf(lineOf.get(r.search)?.index ?? 0); return `background:rgba(${st.rgb},0.09);box-shadow:inset 4px 0 0 ${st.color}` } }) }
-  else if (id === 'books') renderTable($('#tbl-books'), withBookLabels(R.booksTable), BOOK_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Book: renderBookLabel, URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
+  else if (id === 'books') renderTable($('#tbl-books'), withBookLabels(R.booksTable), BOOK_COLS, { rtl: ['Arabic', 'ngramAll'], render: { compsFinal: v => esc(typeLabel(v ?? '')), compsPrelim: v => esc(typeLabel(v ?? '')), Book: renderBookLabel, URL: v => v ? `<a href="${esc(v)}" target="_blank" rel="noopener">text</a>` : '' } })
   else if (id === 'authors') renderTable($('#tbl-authors'), withAuthorLabels(R.authorsTable), AUTHOR_COLS, { rtl: ['Arabic', 'ngramAll'], render: { Author: renderAuthorLabel } })
 }
 const activeCharts = () => [...document.querySelectorAll(`[data-pane="${T.active}"] .js-plotly-plot:not([hidden])`)]
@@ -355,7 +357,7 @@ async function downloadAll() {
     `Data: OpenITI release ${S.release.release}; data repository ${S.release.repo}, commit ${dataCommit(S.release)}`,
     `Downloaded: ${now.toISOString()} (${now.toString()})`,
     `Corpus: ${R.mode === 'all' ? 'keep all texts (100%)' : 'remove problematic (~95%)'}; smoothing span (charts only): ${R.span}`,
-    `Page address of this result: ${location.href}`,
+    `Page address of this result: ${cleanLink()}`,
     '', 'Cite as:', CITE.text('chicago').replace(/\*/g, ''),
     '', 'Search lines and ticked forms:',
     ...R.lines.flatMap(l => { const p = S.previews.find(x => x.line.index === l.index); return [`  ${l.index + 1}. ${p.line.line}`, `     regex: ${l.regex}`, `     ticked forms (${l.ids.length} of ${p.ids.length}): ${l.ids.map(id => p.tr[p.ids.indexOf(id)]).join(', ')}`] }),
@@ -373,7 +375,7 @@ async function downloadAll() {
 const viewState = () => { const V = S.view, x = {}; S.previews.forEach((p, i) => { if (p.excluded.size) x[i] = [...p.excluded].sort((a, b) => a - b).map(n => n.toString(36)).join('.') })
   return { l: S.previews.map(p => p.line.line), ...(Object.keys(x).length ? { x } : {}), ...(mode() === 'all' ? { m: 'a' } : {}), ...(span() !== 0.2 ? { s: span() } : {}), ...(S.release.release === DEFAULT_RELEASE ? { c: S.release.commit.slice(0, 7) } : { d: `${S.release.release}@${S.release.commit}` }),
     ...(T.active !== 'time' ? { t: T.active } : {}), ...(V.value !== 'rel' ? { r: 0 } : {}), ...(V.layout !== 'together' ? { p: 1 } : {}), ...(V.corpus ? { k: 1 } : {}), ...(V.ratio !== '3' ? { a: 2 } : {}), ...(V.tchart === 'radar' ? { q: 1 } : {}), ...(V.tlayout === 'separate' ? { y: 1 } : {}), ...(V.tmeasure === 'corpus' ? { e: 1 } : {}) } }
-async function updateURL() { if (S.previews.length) history.replaceState(null, '', location.pathname + await packState(viewState())) }
+async function updateURL() { if (S.previews.length) history.replaceState(null, '', location.pathname + tourQuery() + await packState(viewState())) }
 function fromPacked(o) {
   const lines = o.l ?? [], excluded = lines.map((_, i) => new Set((o.x?.[i] ?? '').split('.').filter(Boolean).map(t => parseInt(t, 36))))
   return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.k === 1, ratio: o.a === 2 ? '2' : '3', tchart: o.q ? 'radar' : 'bars', tlayout: o.y ? 'separate' : 'together', tmeasure: o.e ? 'corpus' : 'share' } }
@@ -381,7 +383,7 @@ function fromPacked(o) {
 const citation = () => { const R = S.results, y = new Date().getFullYear()
   return { year: y, title: `Results for ${R.lines.map(l => l.userLabel).join(', ')}`, app: CITATION.title, version: CITATION.version, doi: CITATION.doi, data: CITATION.data,
     search: `${R.lines.map(l => { const { p, forms } = formsOf(l); return `${p.line.line} (${forms.length.toLocaleString('en')} of ${p.ids.length.toLocaleString('en')} forms)` }).join('; ')}; ${modeText(R.mode)}`,
-    accessed: today(), link: location.href, key: `romanov${y}ngramreader` } }
+    accessed: today(), link: cleanLink(), key: `romanov${y}ngramreader` } }
 async function versionLine() {
   try {
     const cached = sessionStorage.getItem('ngr-app-commit')
@@ -397,8 +399,19 @@ const TAB_LIST = [{ id: 'time', label: 'Over time' }, { id: 'types', label: 'Boo
 const T = tabs($('#tabs'), TAB_LIST, async id => { await updateURL(); await drawTab(id); activeCharts().forEach(el => redraw(el)) })
 const UI = panel({ onResize })
 const CITE = citeDialog(citation)
+// a tour stop: the packed link state of tours.json, opened as a link is; the search runs again only if it changed
+async function openStop({ panel, ...packed }) {
+  const st = fromPacked(packed), excluded = st.excluded.map(s => [...s].sort((a, b) => a - b))
+  const same = S.results && JSON.stringify([lineValues(), S.previews.map(p => [...p.excluded].sort((a, b) => a - b)), mode(), span()]) === JSON.stringify([st.lines, excluded, st.mode, st.span])
+  S.view = { ...S.view, ...st.view }; S.paintSwitches(); T.active = st.tab ?? 'time'; $('#empty').hidden = true
+  if (panel) UI.fold(panel === 'closed')
+  document.querySelector(`input[name=mode][value=${st.mode}]`).checked = true; $('#span').value = st.span; $('#span-val').textContent = st.span <= 0.1 ? 'none' : st.span
+  if (same) { await updateURL(); await renderResults() }
+  else { $('#lines').innerHTML = ''; st.lines.forEach(l => addLine(l)); await runSearch({ excluded }) }
+}
+const TOURS = createTours({ open: openStop, links: { classifier: classifierURL() } })
 function switches() {
-  const paint = () => { for (const [host, v] of [['#sw-value', S.view.value], ['#sw-layout', S.view.layout], ['#sw-ratio', S.view.ratio], ['#sw-ratio2', S.view.ratio], ['#sw-tchart', S.view.tchart], ['#sw-tlayout', S.view.tlayout], ['#sw-tmeasure', S.view.tmeasure]]) $(host).querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === v); b.setAttribute('aria-pressed', b.dataset.v === v) }); $('#sw-corpus').checked = S.view.corpus; for (const h of ['#sw-tlayout', '#sw-tmeasure']) $(h).classList.toggle('off', S.view.tchart === 'radar') }
+  const paint = S.paintSwitches = () => { for (const [host, v] of [['#sw-value', S.view.value], ['#sw-layout', S.view.layout], ['#sw-ratio', S.view.ratio], ['#sw-ratio2', S.view.ratio], ['#sw-tchart', S.view.tchart], ['#sw-tlayout', S.view.tlayout], ['#sw-tmeasure', S.view.tmeasure]]) $(host).querySelectorAll('button').forEach(b => { b.classList.toggle('on', b.dataset.v === v); b.setAttribute('aria-pressed', b.dataset.v === v) }); $('#sw-corpus').checked = S.view.corpus; for (const h of ['#sw-tlayout', '#sw-tmeasure']) $(h).classList.toggle('off', S.view.tchart === 'radar') }
   const apply = async () => { paint(); if (S.results) { await updateURL(); S.dirty.add('time'); S.dirty.add('types'); S.dirty.add('typestime'); await drawTab(T.active) } }
   for (const h of ['#sw-ratio', '#sw-ratio2']) $(h).onclick = e => { const b = e.target.closest('button'); if (b) { S.view.ratio = b.dataset.v; apply() } }
   $('#sw-value').onclick = e => { const b = e.target.closest('button'); if (b) { S.view.value = b.dataset.v; apply() } }
@@ -418,7 +431,7 @@ async function init() {
   if (st.view) S.view = { ...S.view, ...st.view }
   document.querySelector(`input[name=mode][value=${st.mode}]`).checked = true
   $('#span').value = st.span; $('#span-val').textContent = st.span <= 0.1 ? 'none' : st.span
-  ;(st.lines.length ? st.lines : ['#al-kutub al-sittaŧ #(\\w+)?lktb_Alsto']).forEach(l => addLine(l))
+  ;(st.lines.length ? st.lines : ['']).forEach(l => addLine(l))
   T.enable(Object.fromEntries(TAB_LIST.map(t => [t.id, false])))
   T.active = st.tab ?? 'time'
   dialogs(); switches()
@@ -427,7 +440,7 @@ async function init() {
   const help = e => { e.preventDefault(); $('#help-dialog').showModal() }
   $('#open-help').onclick = help; document.querySelectorAll('[data-help]').forEach(a => a.onclick = help)
   $('#cite').onclick = () => CITE.open()
-  $('#copy-link').onclick = async () => { await updateURL(); copyText(location.href, 'Link copied') }
+  $('#copy-link').onclick = async () => { await updateURL(); copyText(cleanLink(), 'Link copied') }
   $('#add').onclick = () => { addLine(); document.querySelector('#lines .line:last-child input').focus() }
   $('#search').onclick = () => runSearch()
   $('#update').onclick = async () => { if (S.busy) return; S.busy = true; try { await computeAndRender() } finally { S.busy = false; status('') } }
@@ -445,7 +458,10 @@ async function init() {
   new ResizeObserver(onResize).observe($('#content'))
   fontControls(() => activeCharts().forEach(el => redraw(el)))
   versionLine()
+  $('#help-howto').innerHTML = $('#howto').innerHTML
+  const tq = new URLSearchParams(location.search)
+  if (tq.get('tour') && await TOURS.start(tq.get('tour'), Number(tq.get('stop')) || 1)) return
   if (st.lines.length) runSearch({ excluded: st.excluded.map(s => [...s]) })
-  else UI.fold(false)
+  else if (innerWidth >= 900) UI.fold(false)
 }
 init()

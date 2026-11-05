@@ -40,7 +40,13 @@
   <div id="tabs" role="tablist" aria-label="Views"></div>
   <div id="messages" role="alert"></div>
   <div id="status" role="status" hidden></div>
-  <div id="empty"><p>Enter one or more search lines in the panel and press <b>Search</b>. Each view of the results has its own tab.</p></div>
+  <div id="empty"><div id="howto" class="howto"><h2>How to use</h2><ol>
+      <li><b>Type a search line:</b> a label, then the word forms, e.g. <code>#Tasalṭana #tslTn</code>. Arabic letters work too: <code>#Tasalṭana #<span dir="rtl" lang="ar">تسلطن</span></code>.</li>
+      <li><b>Check the forms found.</b> The app lists every matching form with its count; untick any you don't mean.</li>
+      <li><b>Compare words</b> by adding more lines; each line becomes one curve.</li>
+      <li><b>Explore the tabs:</b> over time, book types, centuries, books, authors. Every chart explains itself in its caption.</li>
+      <li><b>Share or cite:</b> “Copy link” reproduces your exact search; “Cite these results” gives a ready-made citation.</li>
+    </ol><p><button type="button" class="primary" data-tour="tasaltana">Take the guided tour →</button></p></div></div>
 
   <section data-pane="time" hidden>
     <div class="toolbar">
@@ -99,10 +105,11 @@
 
 <dialog id="help-dialog" aria-label="Help"><button type="button" class="close" data-close aria-label="Close">×</button><h2>About and instructions</h2>
 <p>Like the <a href="https://books.google.com/ngrams">Google Ngram Viewer</a>, the <b>OpenITI NgramReader</b> charts the frequencies of words and phrases over time, using the OpenITI corpus (8,468 texts; 1,054,622,781 tokens). Unlike it, the NgramReader lets you combine different forms of the same word into one curve — <i>kitāb</i>, <i>al-kitāb</i>, <i>wa-l-kitāb</i> — and build classes of terms, such as <i>Baġdād</i> together with <i>Madīnat al-salām</i>, or all cities of Ḫurāsān. By default, searches run on about 95% of the corpus: 414 texts (61 mln tokens) still contain paraeditorial elements and are left out unless you choose <i>keep all texts (100%)</i>. Time is given in periods of 25 years by the author's death date (AH).</p>
+  <div id="help-howto" class="howto"></div>
   <h3>Search lines</h3>
   <p>Each line is one curve: <code>#Label #item1 #item2 …</code>. The first <code>#</code> part is the label shown in the legend; the other parts are the items searched for, and their matches are added together. For example, <code>#Baġdād #bgdAd #bbgdAd #wbgdAd #wbbgdAd</code>, or shorter with a regular expression, <code>#Baġdād #[wb]?bgdAd</code>. Add as many lines as you like with <i>+ add line</i>.</p>
   <h3>Book types</h3>
-  <p>The bars show how the hits of each line divide over the book types: <i>Together</i> in one chart, <i>Separate</i> with a panel per line, always with the types in alphabetical order, here and in every other chart. <i>Compared with corpus</i> divides a line's share of hits in a type by the type's share of the tokens of the selected corpus, on a log scale. The table uses the type codes; hold the pointer on a code for its name; a darker cell is a larger value within its line. <i>Classic (radar)</i> keeps the earlier chart.</p>
+  <p>The bars show how the hits of each line divide over the book types: <i>Together</i> in one chart, <i>Separate</i> with a panel per line, always with the types in alphabetical order, here and in every other chart. <i>Compared with corpus</i> divides a line's share of hits in a type by the type's share of the tokens of the selected corpus, on a log scale. The table uses the three-letter type codes; hold the pointer on a code for its name; a darker cell is a larger value within its line. <i>Classic (radar)</i> keeps the earlier chart.</p>
   <h4>How to read Compared with corpus</h4>
   <p>Some kinds of books, such as biographical dictionaries, make up a large part of the corpus, so most words appear in them often simply because there is so much of them. This chart removes that effect. For each book type it compares the share of your search's hits found there with that type's share of the whole corpus.</p>
       <ul><li>The <b>line at 1×</b> means “as expected”: the word is as common in this type as the type's size predicts.</li><li>A <b>bar to the right</b> means more than expected: <b>2×</b> is twice as frequent.</li><li>A <b>bar to the left</b> means less than expected: <b>0.5×</b> is half as frequent.</li></ul>

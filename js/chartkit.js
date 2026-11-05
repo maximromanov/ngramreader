@@ -140,9 +140,13 @@ const barMarker = (i, plain) => { const st = styleOf(i), f = plain ? 'solid' : F
   if (f === 'solid') return { color: st.color, line: { color: st.color, width: 0.5 } }
   if (f === 'light') return { color: `rgba(${st.rgb},0.25)`, line: { color: st.color, width: 1 } }
   return { color: '#ffffff', line: { color: st.color, width: 1 }, pattern: { shape: f, fgcolor: st.color, bgcolor: '#ffffff', size: 6, solidity: 0.45 } } }
-// the one order of book types in every chart and table: alphabetical by code, diacritics ignored, so H and Ḥ stand together;
-// "[U] undefined" falls last by itself, labels without a code ("----") after it
-const typeKey = t => { const c = /^\[(.+?)\]/.exec(t)?.[1]; return c ? c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase() : '\uFFFF' }
+// on screen, types carry the three-letter codes of comps_labels ([BIO] biographical …; undefined [UND]); the data, the downloads
+// and the comparison with R keep the labels of the R app
+let typeShown = new Map()
+export const setTypeCodes = pairs => { typeShown = new Map(pairs.map(([label, code]) => [label, label.replace(/^\[.+?\]/, `[${code}]`)])) }
+export const typeLabel = t => typeShown.get(t) ?? t
+// the one order of book types in every chart and table: alphabetical by code; labels without a code ("----") last
+const typeKey = t => { const c = /^\[(.+?)\]/.exec(typeLabel(t))?.[1]; return c ? c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase() : '\uFFFF' }
 export const byType = (a, b) => { const x = typeKey(a), y = typeKey(b); return x < y ? -1 : x > y ? 1 : a < b ? -1 : a > b ? 1 : 0 }
 export const shortType = t => t.replace(/ \(.*/, '').replace(/[“”]/g, '')
 // ratio scale: bars are log10(value), so they grow left and right from 1 ("as expected"); ticks carry the plain values
@@ -162,7 +166,7 @@ function valueAxis(scale, values, width) {
 }
 // series: [{ name, index, values, hover, text, faint }], values in the order of types; faint: bars in a lighter tone; a null or (ratio) zero value draws no bar
 export async function typeBars(el, { types, series, separate = false, scale = 'share', xTitle = '', caption, filename }) {
-  const n = series.length, cats = types.map(t => (narrow() ? shortType(t) : t)), ratio = scale === 'ratio', cols = separate ? n : 1
+  const n = series.length, cats = types.map(t => (narrow() ? shortType(typeLabel(t)) : typeLabel(t))), ratio = scale === 'ratio', cols = separate ? n : 1
   const shown = series.flatMap(s => s.values).filter(v => v !== null && v !== undefined && (!ratio || v > 0))
   const margin = { l: narrow() ? 112 : 240, r: separate ? 20 : 34, b: ratio ? 72 : 56 }
   const gap = separate && n > 1 ? 0.035 : 0, w = (1 - gap * (cols - 1)) / cols, panelW = ((el.clientWidth || 800) - margin.l - margin.r) * w

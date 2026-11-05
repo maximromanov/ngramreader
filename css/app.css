@@ -107,6 +107,27 @@ table.pivot td.num { border: 1px solid #fff; }
 .how summary { cursor: pointer; font-weight: 600; }
 .how p, .how ul { margin: 6px 0; }
 .how ul { padding-left: 20px; }
+.howto ol { padding-left: 22px; margin: 8px 0 12px; }
+.howto li { margin: 5px 0; }
+.howto code span[lang=ar] { font-family: var(--arabic); font-size: 1.25em; }
+.howto h2 { margin-top: 0; }
+#empty .howto { max-width: 74ch; padding-top: 14px; }
+#panel .howto { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+#panel .howto h2 { font-size: calc(16px + var(--fd)); }
+body.touring { padding-bottom: 250px; }
+#tour-card { position: fixed; z-index: 25; bottom: 16px; width: 372px; max-height: calc(100vh - 32px); overflow: auto; background: var(--bg); border: 1px solid var(--line2); border-radius: 10px; box-shadow: 0 6px 22px rgba(0,0,0,0.18); padding: 12px 16px 12px; }
+#tour-card[aria-busy] .tour-foot button { opacity: 0.5; pointer-events: none; }
+#tour-card h3 { margin: 2px 0 6px; font-size: calc(16px + var(--fd)); }
+.tour-name { margin: 0 24px 0 0; color: var(--muted); font-size: calc(12px + var(--fd)); }
+.tour-text p { margin: 5px 0; }
+.tour-more { margin: 6px 0 0; }
+.tour-x { position: absolute; top: 6px; right: 6px; min-height: 26px; width: 26px; padding: 0; border: none; background: none; font-size: calc(18px + var(--fd)); }
+.tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.tour-dots { display: inline-flex; gap: 4px; flex: 1 1 auto; justify-content: center; }
+.tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line2); }
+.tour-dots i.on { background: var(--accent); }
+.tour-n { color: var(--muted); font-size: calc(12px + var(--fd)); white-space: nowrap; }
+@media (max-width: 599px) { #tour-card { left: 0; right: 0; bottom: 0; width: auto; max-height: 46vh; border-radius: 12px 12px 0 0; border-width: 1px 0 0; } body.touring { padding-bottom: 46vh; } }
 .tbl-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 4px 0 6px; }
 .tbl-filter { font-size: calc(13px + var(--fd)); padding: 4px 8px; flex: 1 1 200px; min-width: 0; max-width: 360px; }
 sup.uncertain { color: var(--muted); cursor: help; margin-left: 2px; }

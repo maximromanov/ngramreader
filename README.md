@@ -94,6 +94,21 @@ The LOESS curves agree within about 1e-13. Three deliberate differences remain:
 
 All text, in the interface and the charts, is `Brill`, with `Noto Serif` as the fallback: no web font exists for Brill, so machines without it show Noto Serif. Arabic is Amiri (Google Fonts). In exported images the text uses the fonts installed on the machine.
 
+## Guided tours
+
+Tours are data: `tours/tours.json`. Editing or adding a tour needs no change to the code. The tours open from the button on the start page and in Help (`data-tour="<id>"`), or by a link: `?tour=<id>&stop=<n>`.
+
+```json
+{ "tours": [ { "id": "…", "title": "…", "stops": [
+  { "title": "…", "text": "First paragraph.\nSecond paragraph.", "state": { … }, "continue": { "label": "…", "app": "classifier", "tour": "…" } }
+] } ] }
+```
+
+- `text`, `title`: `*…*` is italics, `` `…` `` is code, `\n` starts a new paragraph. In JSON a backslash is written twice (`\\w*`).
+- `continue` (optional): a link to a tour of the other app, opened in a new tab.
+- `state`: the view the stop opens, through the same code as a link. `panel` is `"open"` or `"closed"`.
+- `state` keys: `l` search lines (array), `x` unticked forms per line, `m: "a"` all texts, `s` smoothing span, `t` tab (`time`, `types`, `typestime`, `century`, `books`, `authors`), `r: 0` absolute values, `p: 1` Separate on Over time, `k: 1` corpus size on, `a: 2` proportion 1:2, `q: 1` classic radar, `y: 1` Separate on Book types, `e: 1` Compared with corpus. Keys left out take the default.
+
 ## Development
 
 Run both apps and the local data copy from one server (Node, nothing to install; it supports HTTP Range requests):
