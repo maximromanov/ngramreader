@@ -2,7 +2,7 @@
 //   l = a search line (repeated, in order)
 //   x = "<line number>:<excluded IDs>" for unticked forms (IDs in base 36, "." separated; repeated per line)
 //   m = corpus mode: clean | all        s = smoothing span (0.1 = none)
-//   d = data release@commit (results are reproduced against the same data commit)
+//   d = data release@commit (the release decides; see resolveRelease in config.js)
 export function encodeState({ lines, excluded, mode, span, release }) {
   const p = new URLSearchParams()
   lines.forEach(l => p.append('l', l))
