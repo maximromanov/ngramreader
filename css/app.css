@@ -132,7 +132,7 @@ tr.tour-spot { outline-offset: -3px; }
 .tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line2); }
 .tour-dots i.on { background: var(--accent); }
 .tour-n { color: var(--muted); font-size: calc(12px + var(--fd)); white-space: nowrap; }
-@media (max-width: 599px) { #tour-card { left: 0; right: 0; bottom: 0; width: auto; max-height: 46vh; border-radius: 12px 12px 0 0; border-width: 1px 0 0; } body.touring { padding-bottom: 46vh; } }
+@media (max-width: 599px) { #topbar { position: static; } .tour-spot { scroll-margin-top: 8px; } .tour-skip { min-height: 32px; top: 4px; } .tour-x { min-height: 32px; width: 32px; top: 4px; right: 2px; } #tour-card { left: 0; right: 0; bottom: 0; width: auto; max-height: 46vh; border-radius: 12px 12px 0 0; border-width: 1px 0 0; } body.touring { padding-bottom: 46vh; } }
 .tbl-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 4px 0 6px; }
 .tbl-filter { font-size: calc(13px + var(--fd)); padding: 4px 8px; flex: 1 1 200px; min-width: 0; max-width: 360px; }
 sup.uncertain { color: var(--muted); cursor: help; margin-left: 2px; }

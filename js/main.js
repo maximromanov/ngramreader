@@ -358,7 +358,7 @@ async function downloadAll() {
     `Downloaded: ${now.toISOString()} (${now.toString()})`,
     `Corpus: ${R.mode === 'all' ? 'keep all texts (100%)' : 'remove problematic (~95%)'}; smoothing span (charts only): ${R.span}`,
     `Page address of this result: ${cleanLink()}`,
-    '', 'Cite as:', CITE.text('chicago').replace(/\*/g, ''),
+    '', 'Cite as:', CITE.text('chicago'),
     '', 'Search lines and ticked forms:',
     ...R.lines.flatMap(l => { const p = S.previews.find(x => x.line.index === l.index); return [`  ${l.index + 1}. ${p.line.line}`, `     regex: ${l.regex}`, `     ticked forms (${l.ids.length} of ${p.ids.length}): ${l.ids.map(id => p.tr[p.ids.indexOf(id)]).join(', ')}`] }),
     '', 'Book titles and author names (columns Book, Author, Arabic) are working labels and may contain errors; the URI is authoritative.',

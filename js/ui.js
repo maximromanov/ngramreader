@@ -21,7 +21,7 @@ export function tabs(host, list, onChange) {
     set(id, silent) {
       const b = host.querySelector(`[data-tab="${id}"]`); if (!b || b.disabled) id = api.firstEnabled()
       api.active = id
-      host.querySelectorAll('[role=tab]').forEach(x => { const on = x.dataset.tab === id; x.setAttribute('aria-selected', on); x.classList.toggle('on', on) })
+      host.querySelectorAll('[role=tab]').forEach(x => { const on = x.dataset.tab === id; x.setAttribute('aria-selected', on); x.classList.toggle('on', on); if (on) host.scrollLeft = x.offsetLeft - host.offsetLeft - (host.clientWidth - x.offsetWidth) / 2 })   // the active tab stays in view on phones
       document.querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== id })
       if (!silent) onChange(id)
     },
@@ -58,5 +58,5 @@ export function citeDialog(get) {
   }
   tabsEl.onclick = e => { const b = e.target.closest('[data-fmt]'); if (b) { fmt = b.dataset.fmt; draw() } }
   dlg.querySelector('.cite-copy').onclick = () => copyText(dlg.dataset.text, 'Citation copied')
-  return { open() { draw(); dlg.showModal() }, text: f => unlit(FORMATS[f].make(get())) }
+  return { open() { draw(); dlg.showModal() }, text: f => unlit(FORMATS[f].make(get()).replace(/\*/g, '')) }
 }

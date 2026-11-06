@@ -50,7 +50,7 @@ export async function overTimeSeparate(el, panels, { span, corpus, caption, file
   const doms = domains(gap)
   panels.forEach((p, i) => {
     const dom = doms[i], st = styleOf(p.index), a = 3 * i + 1, b = a + 1, c = a + 2, x = xRef(i)
-    layout[xName(i)] = timeAxis({ anchor: ref(a), ...(i ? { matches: 'x' } : {}) })      // every panel has its time labels; zooming one zooms all
+    layout[xName(i)] = timeAxis({ anchor: ref(a), ...(i ? { matches: 'x' } : {}), ...(narrow() ? timeTicks(400) : {}) })      // every panel has its time labels; zooming one zooms all
     if (corpus) traces.push({ ...corpusBars(corpus, ref(c)), xaxis: x })
     traces.push({ type: 'bar', x: PERIODS_PLOT, y: p.absolute, xaxis: x, yaxis: ref(a), width: 21, marker: { color: `rgba(${st.rgb},0.24)` }, hovertemplate: `${p.userLabel}: %{y:,} occurrences at %{x} AH<extra></extra>` })
     traces.push({ type: 'scatter', mode: 'lines', x: PERIODS_PLOT, y: smoothSeries(PERIODS_PLOT, p.relative, span), xaxis: x, yaxis: ref(b), line: { color: st.color, dash: st.dash, width: 2.4 }, hovertemplate: `${p.userLabel}: %{y:.5%} at %{x} AH<extra></extra>` })

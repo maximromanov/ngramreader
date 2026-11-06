@@ -98,7 +98,7 @@ export async function plot(el, traces, layout, caption, filename) {
   el._kit = { traces, layout, caption, filename }
   const width = el.clientWidth || 800, fixed = figureHeight(layout, caption, width, 1, fontDelta), height = fixed ?? layout.height ?? (el.clientHeight || 500)
   if (fixed) el.style.height = `${fixed}px`
-  await Plotly.react(el, traces, { ...styled({ ...layout, height }, caption, { width, d: fontDelta }), width, height }, config)
+  await Plotly.react(el, traces, { ...styled({ ...layout, height }, caption, { width, d: fontDelta }), width, height }, { ...config, displayModeBar: narrow() ? false : 'hover' })   // on phones the toolbar would lie over the title
 }
 export async function redraw(el) { if (el?._kit) { const { traces, layout, caption, filename } = el._kit; await plot(el, traces, layout, caption, filename) } }
 export async function setShapes(el, shapes) { const Plotly = await loadPlotly(); el._kit.layout = { ...el._kit.layout, shapes }; await Plotly.relayout(el, { shapes }) }
@@ -148,7 +148,7 @@ export const typeLabel = t => typeShown.get(t) ?? t
 // the one order of book types in every chart and table: alphabetical by code; labels without a code ("----") last
 const typeKey = t => { const c = /^\[(.+?)\]/.exec(typeLabel(t))?.[1]; return c ? c.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase() : '\uFFFF' }
 export const byType = (a, b) => { const x = typeKey(a), y = typeKey(b); return x < y ? -1 : x > y ? 1 : a < b ? -1 : a > b ? 1 : 0 }
-export const shortType = t => t.replace(/ \(.*/, '').replace(/[“”]/g, '')
+export const shortType = t => t.replace(/ \(.*/, '').replace(/[“”]/g, '').replace(/-theological$/, '')   // labels for phones
 // ratio scale: bars are log10(value), so they grow left and right from 1 ("as expected"); ticks carry the plain values
 const RATIO_TICKS = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]
 function ratioAxis(values, width) {
