@@ -1,5 +1,5 @@
 // Shared interface pieces (both apps; keep both copies the same): foldable panel, tabs, dialogs, copy, toast.
-import { FORMATS } from './cite.js'
+import { FORMATS, unlit } from './cite.js'
 import { setFontDelta } from './chartkit.js'
 const $ = s => document.querySelector(s)
 const phone = () => innerWidth < 600
@@ -52,11 +52,11 @@ export function citeDialog(get) {
   tabsEl.innerHTML = Object.entries(FORMATS).map(([k, f]) => `<button type="button" data-fmt="${k}">${f.label}</button>`).join('')
   const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
   const draw = () => {
-    const f = FORMATS[fmt], text = f.make(get()); dlg.dataset.text = text.replace(/\*/g, f.html ? '' : '*')
-    body.innerHTML = f.html ? esc(text).replace(/\*([^*]+)\*/g, '<i>$1</i>') : `<pre>${esc(text)}</pre>`
+    const f = FORMATS[fmt], text = f.make(get()); dlg.dataset.text = unlit(text.replace(/\*/g, f.html ? '' : '*'))
+    body.innerHTML = f.html ? unlit(esc(text).replace(/\*([^*]+)\*/g, '<i>$1</i>')) : `<pre>${esc(text)}</pre>`
     tabsEl.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.fmt === fmt))
   }
   tabsEl.onclick = e => { const b = e.target.closest('[data-fmt]'); if (b) { fmt = b.dataset.fmt; draw() } }
   dlg.querySelector('.cite-copy').onclick = () => copyText(dlg.dataset.text, 'Citation copied')
-  return { open() { draw(); dlg.showModal() }, text: f => FORMATS[f].make(get()) }
+  return { open() { draw(); dlg.showModal() }, text: f => unlit(FORMATS[f].make(get())) }
 }

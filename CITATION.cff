@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "DHFAIS App{endix} 1: OpenITI NgramReader, Version 2 (based on OpenITI, Release ver. 2023.1.8)"
+version: "2"
+date-released: 2026-11-05
+doi: 10.5281/zenodo.23985408
+authors:
+  - family-names: Romanov
+    given-names: Maxim
+repository-code: "https://github.com/maximromanov/ngramreader"
+url: "https://maximromanov.github.io/ngramreader/"
+license: MIT
+references:
+  - type: data
+    title: "OpenITI, Release ver. 2023.1.8"
+    doi: 10.5281/zenodo.10007820
+    authors:
+      - name: "OpenITI"

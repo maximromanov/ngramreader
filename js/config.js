@@ -13,9 +13,9 @@ export const RELEASES = {
 }
 export const DEFAULT_RELEASE = '2023.1.8'
 
-// Local development only: on localhost a git-ignored js/config.local.js may point the app at a local data server
+// Local development only: on localhost or a private network address a git-ignored js/config.local.js may point the app at a local data server
 // ({ dataBase, commit, classifier }; see README, "Development"). On any other host this is never loaded.
-export const DEV = ['localhost', '127.0.0.1'].includes(location.hostname)
+export const DEV = /^(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname)
   ? await import('./config.local.js').then(m => m.default).catch(() => null) : null
 
 export const APP = {
@@ -25,8 +25,8 @@ export const APP = {
   classifier: 'https://maximromanov.github.io/classifier/',   // book and author profiles (Book Classifier), linked from the tables
 }
 
-// citation of the app. doi: for now the concept DOI of the Zenodo record; switch to the version DOI at release (README)
-export const CITATION = { version: '2.0', doi: '10.5281/zenodo.15662941', year: 2026, title: 'ADHFAIS App{endix} 1: OpenITI NgramReader', data: 'OpenITI, release 2023.1.8, https://doi.org/10.5281/zenodo.10007820' }
+// citation of the app: Romanov, Maxim. *title*. Zenodo, released <released>. https://doi.org/<doi>.
+export const CITATION = { version: '2', doi: '10.5281/zenodo.23985408', year: 2026, released: 'November 5, 2026', title: 'DHFAIS App{endix} 1: OpenITI NgramReader, Version 2 (based on OpenITI, Release ver. 2023.1.8)', data: 'OpenITI, release 2023.1.8, https://doi.org/10.5281/zenodo.10007820' }
 export const classifierURL = () => DEV?.classifier ?? APP.classifier
 
 // pinned library versions (loaded from cdn.jsdelivr.net)

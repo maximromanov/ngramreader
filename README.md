@@ -7,7 +7,7 @@ The OpenITI NgramReader charts the chronological frequencies of words and phrase
 - distribution over book types, as a radar chart and over time;
 - tables by century, book and author.
 
-This version runs entirely in the browser. It is plain HTML, CSS and JavaScript on GitHub Pages, with no server process and no build step. It is a redesign of the R/Shiny NgramReader ("ADHFAIS APP{ENDIX} 1"). For the same search, it gives the same counts, frequencies and tables as the R app's 2026 Parquet version (see "Agreement with the R app" below).
+This version runs entirely in the browser. It is plain HTML, CSS and JavaScript on GitHub Pages, with no server process and no build step. It is a redesign of the R/Shiny NgramReader (DHFAIS App{endix} 1, formerly ADHFAIS). For the same search, it gives the same counts, frequencies and tables as the R app's 2026 Parquet version (see "Agreement with the R app" below).
 
 ## Interface
 
@@ -128,7 +128,7 @@ export default { dataBase: 'http://localhost:8001/data/', commit: '<local data c
 ## Releasing a new version
 
 1. On Zenodo, reserve the DOI of the new version.
-2. In `js/config.js`, set `CITATION.doi` to it (until then the concept DOI, `10.5281/zenodo.15662941`) and `CITATION.version`, `CITATION.year` as needed.
+2. In `js/config.js`, set `CITATION.doi`, `CITATION.released`, `CITATION.title` and `CITATION.year` as needed, and the same in `CITATION.cff`.
 3. Move the pinned data commit in `js/config.js` if the data changed (same commit as the Book Classifier), and add the old commit to `pins` there so that existing links keep resolving.
 
 ## Libraries
@@ -144,7 +144,7 @@ All are loaded from `cdn.jsdelivr.net` at pinned versions (`js/config.js`):
 
 ## Citation
 
-Romanov, Maxim. (2026). *ADHFAIS App{endix} 1: OpenITI NgramReader (based on OpenITI, Release ver. 2023.1.8)* (Version 2.0) [Software]. Zenodo. https://doi.org/10.5281/zenodo.15662941
+Romanov, Maxim. *DHFAIS App{endix} 1: OpenITI NgramReader, Version 2 (based on OpenITI, Release ver. 2023.1.8)*. Zenodo, released November 5, 2026. https://doi.org/10.5281/zenodo.23985408.
 
 **Acknowledgements:** Early versions of the NgramReader were developed within the KITAB Project, funded by ERC Consolidator Grant (#772989, 2018–2023); the current version has been developed within the framework of the EIS1600 Project, funded by DFG through the Emmy Noether Programm.
 

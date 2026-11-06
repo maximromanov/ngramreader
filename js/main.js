@@ -1,5 +1,5 @@
 // OpenITI NgramReader, static v1 — page controller.
-import { APP, CITATION, RELEASES, DEFAULT_RELEASE, dataBase, dataCommit, classifierURL, resolveRelease } from './config.js'
+import { APP, DEV, CITATION, RELEASES, DEFAULT_RELEASE, dataBase, dataCommit, classifierURL, resolveRelease } from './config.js'
 import { validateLines } from './query.js'
 import { readByIds, loadStatic, loadLabels } from './data.js'
 import { prepare, compute, relative, PERIODS_PLOT, CENTURIES, compsCompared } from './compute.js'
@@ -380,14 +380,14 @@ function fromPacked(o) {
   const lines = o.l ?? [], excluded = lines.map((_, i) => new Set((o.x?.[i] ?? '').split('.').filter(Boolean).map(t => parseInt(t, 36))))
   return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.k === 1, ratio: o.a === 2 ? '2' : '3', tchart: o.q ? 'radar' : 'bars', tlayout: o.y ? 'separate' : 'together', tmeasure: o.e ? 'corpus' : 'share' } }
 }
-const citation = () => { const R = S.results, y = new Date().getFullYear()
-  return { year: y, title: `Results for ${R.lines.map(l => l.userLabel).join(', ')}`, app: CITATION.title, version: CITATION.version, doi: CITATION.doi, data: CITATION.data,
+const citation = () => { const R = S.results, y = CITATION.year
+  return { year: y, title: `Results for ${R.lines.map(l => l.userLabel).join(', ')}`, app: CITATION.title, released: CITATION.released, version: CITATION.version, doi: CITATION.doi, data: CITATION.data,
     search: `${R.lines.map(l => { const { p, forms } = formsOf(l); return `${p.line.line} (${forms.length.toLocaleString('en')} of ${p.ids.length.toLocaleString('en')} forms)` }).join('; ')}; ${modeText(R.mode)}`,
     accessed: today(), link: cleanLink(), key: `romanov${y}ngramreader` } }
 async function versionLine() {
   try {
     const cached = sessionStorage.getItem('ngr-app-commit')
-    S.appCommit = cached || (location.hostname === 'localhost' ? 'local' : (await (await fetch(`https://api.github.com/repos/${APP.repo}/commits/main`)).json()).sha?.slice(0, 7)) || null
+    S.appCommit = cached || (DEV ? 'local' : (await (await fetch(`https://api.github.com/repos/${APP.repo}/commits/main`)).json()).sha?.slice(0, 7)) || null
     if (S.appCommit) sessionStorage.setItem('ngr-app-commit', S.appCommit)
   } catch { S.appCommit = null }
   const c = dataCommit(S.release)
@@ -437,7 +437,7 @@ async function init() {
   T.active = st.tab ?? 'time'
   dialogs(); switches()
   $('#link-other').href = classifierURL()
-  const c = CITATION; $('#citation-block').innerHTML = `<b>Citation:</b> Romanov, Maxim. (${c.year}). <i>${esc(c.title)} (based on OpenITI, Release ver. 2023.1.8)</i> (Version ${c.version}) [Software]. Zenodo. <a href="https://doi.org/${c.doi}">https://doi.org/${c.doi}</a>`
+  const c = CITATION; $('#citation-block').innerHTML = `<b>Citation:</b> Romanov, Maxim. <i>${esc(c.title)}</i>. Zenodo, released ${c.released}. <a href="https://doi.org/${c.doi}">https://doi.org/${c.doi}</a>.`
   const help = e => { e.preventDefault(); $('#help-dialog').showModal() }
   $('#open-help').onclick = help; document.querySelectorAll('[data-help]').forEach(a => a.onclick = help)
   $('#cite').onclick = () => CITE.open()
