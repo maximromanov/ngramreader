@@ -13,5 +13,14 @@ export const FORMATS = {
   ris: { label: 'RIS', make: c => [['TY', 'DATA'], ['AU', 'Romanov, Maxim'], ['PY', c.year], ['TI', plain(c.title)], ['T2', c.app], ['ET', c.version], ['PB', 'Zenodo'], ['DO', c.doi], ['UR', c.link], ['Y2', c.accessed.replace(/-/g, '/')], ['N1', `Data: ${c.data}. Search: ${c.search}`], ['ER', '']].map(([k, v]) => `${k}  - ${v}`).join('\n') },
 }
 
+// the app itself, when there is no result to cite yet (c.whole): the citation as ruled, and the formats derived from it
+const WHOLE = {
+  chicago: c => `Romanov, Maxim. *${c.app}*. Zenodo, released ${c.released}. https://doi.org/${c.doi}.`,
+  apa: c => `Romanov, M. (${apaDate(c.released)}). *${c.app}*. Zenodo. https://doi.org/${c.doi}`,
+  bibtex: c => `@software{${c.key},\n  author = {Romanov, Maxim},\n  title = {${bib(c.app)}},\n  year = {${c.year}},\n  publisher = {Zenodo},\n  doi = {${c.doi}},\n  url = {https://doi.org/${c.doi}}\n}`,
+  ris: c => [['TY', 'COMP'], ['AU', 'Romanov, Maxim'], ['PY', c.year], ['TI', c.app], ['PB', 'Zenodo'], ['DO', c.doi], ['UR', `https://doi.org/${c.doi}`], ['ER', '']].map(([k, v]) => `${k}  - ${v}`).join('\n'),
+}
+for (const [k, f] of Object.entries(FORMATS)) { const make = f.make; f.make = c => (c.whole ? WHOLE[k](c) : make(c)) }
+
 // the citation inside a chart: Chicago, without the search lines (the chart's subtitle has them), with the data commit
 export const chartCitation = (c, commit) => `<b>Cite as:</b> Romanov, Maxim. “${c.title}.” In *${c.app}*. Zenodo, released ${c.released}. https://doi.org/${c.doi}. Data: ${c.data} (data commit ${commit}). Accessed ${c.accessed}. ${c.link}.`.replace(/\*([^*]+)\*/g, '<i>$1</i>')

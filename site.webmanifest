@@ -1,0 +1,16 @@
+{
+  "name": "OpenITI NgramReader",
+  "short_name": "NgramReader",
+  "description": "Chronological frequencies of words and phrases in the OpenITI corpus of premodern Arabic texts (release 2023.1.8), in the browser.",
+  "id": "/ngramreader/",
+  "start_url": "/ngramreader/",
+  "scope": "/ngramreader/",
+  "display": "standalone",
+  "theme_color": "#1f5f99",
+  "background_color": "#ffffff",
+  "icons": [
+    { "src": "brand/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "brand/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

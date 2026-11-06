@@ -1,19 +1,37 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-app="ngramreader">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OpenITI NgramReader</title>
 <meta name="description" content="Chronological frequencies of words and phrases in the OpenITI corpus of premodern Arabic texts (release 2023.1.8), in the browser.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M1 14 L5 8 L9 10 L15 2%22 stroke=%22%231f5f99%22 stroke-width=%222%22 fill=%22none%22/%3E%3C/svg%3E">
+<link rel="icon" href="brand/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="brand/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="brand/favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="brand/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#1f5f99">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NgramReader">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenITI NgramReader">
+<meta property="og:description" content="Chronological frequencies of words and phrases in the OpenITI corpus of premodern Arabic texts (release 2023.1.8), in the browser.">
+<meta property="og:image" content="https://maximromanov.github.io/ngramreader/brand/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://maximromanov.github.io/ngramreader/">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&display=swap">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 <header class="site">
-  <div class="brand"><a class="name" href="./">OpenITI NgramReader</a><span class="sub">DHFAIS App 1 · OpenITI 2023.1.8</span></div>
-  <nav aria-label="Site"><a id="link-other" href="https://maximromanov.github.io/classifier/" target="_blank" rel="noopener">Book Classifier ↗</a><a href="#" id="open-help">Help</a><span class="fontsize" role="group" aria-label="Text size"><button type="button" id="font-minus" title="Smaller text" aria-label="Smaller text">−</button><button type="button" id="font-plus" title="Larger text" aria-label="Larger text">+</button></span></nav>
+  <div class="brand"><a class="name" href="./"><img class="band-mark" src="brand/mark-ngramreader.svg" alt=""><span class="band-title"><span class="band-full">OpenITI </span>NgramReader</span><span class="sub">DHFAIS App{endix} 1</span></a></div>
+  <nav id="band-nav" aria-label="Site"><a id="link-other" href="https://maximromanov.github.io/classifier/" target="_blank" rel="noopener">Book Classifier</a><a href="https://brill.com/display/title/74416" target="_blank" rel="noopener">The book</a><a href="#" id="open-help">Help</a><button type="button" id="band-cite" class="band-link">Cite</button></nav>
+  <button type="button" id="band-menu" class="band-menu" aria-label="Menu" aria-expanded="false" aria-controls="band-nav"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><path d="M3 6 H21 M3 12 H21 M3 18 H21" stroke="#fff" stroke-width="2.6" fill="none"/></svg></button>
+  <svg class="band-rule" viewBox="0 0 1000 14" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M0 10 C210 10 300 0 490 0 S790 10 1000 10 V14 H0 Z" fill="#9dbee0"/></svg>
 </header>
 
 <div class="shell">
@@ -35,7 +53,7 @@
 <div id="content">
   <div id="topbar">
     <div id="chips"><span class="note">No search yet.</span></div>
-    <div class="actions"><button type="button" id="cite" disabled>Cite these results</button><button type="button" id="copy-link" disabled>Copy link</button><button type="button" id="download-all" disabled>Download all (zip)</button></div>
+    <div class="actions"><span class="fontsize" role="group" aria-label="Text size"><button type="button" id="font-minus" title="Smaller text" aria-label="Smaller text">−</button><button type="button" id="font-plus" title="Larger text" aria-label="Larger text">+</button></span><button type="button" id="cite" disabled>Cite these results</button><button type="button" id="copy-link" disabled>Copy link</button><button type="button" id="download-all" disabled>Download all (zip)</button></div>
   </div>
   <div id="tabs" role="tablist" aria-label="Views"></div>
   <div id="messages" role="alert"></div>

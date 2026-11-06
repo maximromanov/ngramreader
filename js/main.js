@@ -5,7 +5,7 @@ import { readByIds, loadStatic, loadLabels } from './data.js'
 import { prepare, compute, relative, PERIODS_PLOT, CENTURIES, compsCompared } from './compute.js'
 import { overTimeTogether, overTimeSeparate, radarChart, typesOverTimeChart } from './charts.js'
 import { redraw, exportBar, styleOf, arabic, typeBars, narrow, byType, setTypeCodes, typeLabel } from './chartkit.js'
-import { panel, tabs, dialogs, citeDialog, copyText, fontControls } from './ui.js'
+import { panel, tabs, dialogs, citeDialog, copyText, fontControls, bandMenu } from './ui.js'
 import { translitInput } from './translit.js'
 import { createTours, tourQuery, cleanLink } from './tour.js'
 import { packState, unpackState } from './share.js'
@@ -376,9 +376,9 @@ const viewState = () => { const V = S.view, x = {}; S.previews.forEach((p, i) =>
   return { l: S.previews.map(p => p.line.line), ...(Object.keys(x).length ? { x } : {}), ...(mode() === 'all' ? { m: 'a' } : {}), ...(span() !== 0.2 ? { s: span() } : {}), ...(S.release.release === DEFAULT_RELEASE ? { c: S.release.commit.slice(0, 7) } : { d: `${S.release.release}@${S.release.commit}` }),
     ...(T.active !== 'time' ? { t: T.active } : {}), ...(V.value !== 'rel' ? { r: 0 } : {}), ...(V.layout !== 'together' ? { p: 1 } : {}), ...(V.corpus ? { k: 1 } : {}), ...(V.ratio !== '3' ? { a: 2 } : {}), ...(V.tchart === 'radar' ? { q: 1 } : {}), ...(V.tlayout === 'separate' ? { y: 1 } : {}), ...(V.tmeasure === 'corpus' ? { e: 1 } : {}) } }
 async function updateURL() { if (S.previews.length) history.replaceState(null, '', location.pathname + tourQuery() + await packState(viewState())) }
-function fromPacked(o) {
+function fromPacked(o, legacy = false) {   // legacy: links of the first form (#v=2&s=), made when the corpus bars were on by default
   const lines = o.l ?? [], excluded = lines.map((_, i) => new Set((o.x?.[i] ?? '').split('.').filter(Boolean).map(t => parseInt(t, 36))))
-  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: o.k === 1, ratio: o.a === 2 ? '2' : '3', tchart: o.q ? 'radar' : 'bars', tlayout: o.y ? 'separate' : 'together', tmeasure: o.e ? 'corpus' : 'share' } }
+  return { lines, excluded, mode: o.m === 'a' ? 'all' : 'clean', span: o.s ?? 0.2, release: o.d ?? (o.c ? `${DEFAULT_RELEASE}@${o.c}` : null), tab: o.t, view: { value: o.r === 0 ? 'abs' : 'rel', layout: o.p ? 'separate' : 'together', corpus: legacy ? o.k !== 0 : o.k === 1, ratio: o.a === 2 ? '2' : '3', tchart: o.q ? 'radar' : 'bars', tlayout: o.y ? 'separate' : 'together', tmeasure: o.e ? 'corpus' : 'share' } }
 }
 const citation = () => { const R = S.results, y = CITATION.year
   return { year: y, title: `Results for ${R.lines.map(l => l.userLabel).join(', ')}`, app: CITATION.title, released: CITATION.released, version: CITATION.version, doi: CITATION.doi, data: CITATION.data,
@@ -398,7 +398,7 @@ async function versionLine() {
 const TAB_LIST = [{ id: 'time', label: 'Over time' }, { id: 'types', label: 'Book types' }, { id: 'typestime', label: 'Types over time' }, { id: 'century', label: 'Centuries' }, { id: 'books', label: 'Books' }, { id: 'authors', label: 'Authors' }, { id: 'map', label: 'Map (soon)', soon: true }]
 const T = tabs($('#tabs'), TAB_LIST, async id => { await updateURL(); await drawTab(id); activeCharts().forEach(el => redraw(el)) })
 const UI = panel({ onResize })
-const CITE = citeDialog(citation)
+const CITE = citeDialog(() => (!S.results ? { whole: true, year: CITATION.year, app: CITATION.title, released: CITATION.released, doi: CITATION.doi, key: `romanov${CITATION.year}ngramreader` } : citation()))
 // a tour stop: the packed link state of tours.json, opened as a link is; the search runs again only if it changed
 async function openStop({ panel, ...packed }) {
   const st = fromPacked(packed), excluded = st.excluded.map(s => [...s].sort((a, b) => a - b))
@@ -427,7 +427,8 @@ function switches() {
 const dl = name => { const [rows, cols] = TABLES[name](S.results); saveText(toTSV(rows, cols), `${fileStem()}_${name}.tsv`) }
 async function init() {
   const packed = await unpackState(location.hash)
-  const st = packed ? fromPacked(packed) : decodeState(location.search)
+  const st = packed ? fromPacked(packed, location.hash.startsWith('#v=2&s=')) : decodeState(location.search)
+  if (!packed && st.lines.length) st.view = { ...st.view, corpus: true }     // ?l=… links are older still: bars on, as they opened
   S.release = st.release ? resolveRelease(st.release) : RELEASES[DEFAULT_RELEASE]
   if (st.view) S.view = { ...S.view, ...st.view }
   document.querySelector(`input[name=mode][value=${st.mode}]`).checked = true
@@ -440,7 +441,7 @@ async function init() {
   const c = CITATION; $('#citation-block').innerHTML = `<b>Citation:</b> Romanov, Maxim. <i>${esc(c.title)}</i>. Zenodo, released ${c.released}. <a href="https://doi.org/${c.doi}">https://doi.org/${c.doi}</a>.`
   const help = e => { e.preventDefault(); $('#help-dialog').showModal() }
   $('#open-help').onclick = help; document.querySelectorAll('[data-help]').forEach(a => a.onclick = help)
-  $('#cite').onclick = () => CITE.open()
+  $('#cite').onclick = () => CITE.open(); $('#band-cite').onclick = () => CITE.open(); bandMenu()
   $('#copy-link').onclick = async () => { await updateURL(); copyText(cleanLink(), 'Link copied') }
   $('#add').onclick = () => { addLine(); document.querySelector('#lines .line:last-child input').focus() }
   $('#search').onclick = () => runSearch()

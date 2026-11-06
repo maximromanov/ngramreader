@@ -110,6 +110,11 @@ Tours are data: `tours/tours.json`. Editing or adding a tour needs no change to 
 - `state`: the view the stop opens, through the same code as a link. `panel` is `"open"` or `"closed"`.
 - `state` keys: `l` search lines (array), `x` unticked forms per line, `m: "a"` all texts, `s` smoothing span, `t` tab (`time`, `types`, `typestime`, `century`, `books`, `authors`), `r: 0` absolute values, `p: 1` Separate on Over time, `k: 1` corpus size on, `a: 2` proportion 1:2, `q: 1` classic radar, `y: 1` Separate on Book types, `e: 1` Compared with corpus. Keys left out take the default.
 
+## Changes
+
+- **2.1:** branded header band, icons, install as a web app (manifest; no service worker). Links of the first forms open with the corpus bars on, as they did.
+- **2.0:** redesign, guided tours, DHFAIS name and citations, one-commit data repository.
+
 ## Development
 
 Run both apps and the local data copy from one server (Node, nothing to install; it supports HTTP Range requests):

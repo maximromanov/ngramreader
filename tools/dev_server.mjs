@@ -8,7 +8,7 @@ import { createReadStream, statSync, existsSync } from 'node:fs'
 import { join, extname, normalize, resolve } from 'node:path'
 const [port = '8001', ngr = 'apps/ngramreader', cls = 'apps/classifier', data = 'data/ngramreader-data-2023.1.8-derived', host = '127.0.0.1'] = process.argv.slice(2)   // host 0.0.0.0: reachable on the local network
 const ROOTS = { ngramreader: resolve(ngr), classifier: resolve(cls), data: resolve(data) }
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.tsv': 'text/tab-separated-values; charset=utf-8', '.json': 'application/json', '.parquet': 'application/octet-stream' }
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.tsv': 'text/tab-separated-values; charset=utf-8', '.json': 'application/json', '.parquet': 'application/octet-stream' }
 createServer((req, res) => {
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Range', 'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges', 'Accept-Ranges': 'bytes', 'Cache-Control': 'max-age=300' }
   if (req.method === 'OPTIONS') { res.writeHead(204, cors); return res.end() }

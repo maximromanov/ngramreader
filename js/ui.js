@@ -6,7 +6,7 @@ const phone = () => innerWidth < 600
 
 export function panel({ onResize }) {
   const body = document.body
-  const fold = on => { body.classList.toggle('folded', on); if (phone()) body.classList.toggle('drawer-open', !on); onResize?.() }
+  const fold = on => { document.documentElement.style.setProperty('--drawer-top', `${Math.max(0, $('header.site').getBoundingClientRect().bottom)}px`); body.classList.toggle('folded', on); if (phone()) body.classList.toggle('drawer-open', !on); onResize?.() }
   $('#hide-panel').onclick = () => fold(true)
   $('#show-panel').onclick = () => fold(false)
   document.querySelectorAll('[data-open-panel]').forEach(b => b.onclick = () => fold(false))
@@ -40,6 +40,16 @@ export function fontControls(onChange) {
   $('#font-minus').onclick = () => change(-1); $('#font-plus').onclick = () => change(1); apply()
 }
 
+// the band's menu on phones: the button opens the same links; Esc closes it and returns to the button
+export function bandMenu() {
+  const b = $('#band-menu'), nav = $('#band-nav'), open = () => nav.classList.contains('open')
+  const set = on => { nav.classList.toggle('open', on); b.setAttribute('aria-expanded', on); if (on) nav.querySelector('a, button').focus() }
+  b.onclick = () => set(!open())
+  nav.addEventListener('click', e => { if (e.target.closest('a, button')) set(false) })
+  document.addEventListener('click', e => { if (open() && !e.target.closest('#band-nav, #band-menu')) set(false) })
+  addEventListener('keydown', e => { if (e.key === 'Escape' && open()) { e.stopImmediatePropagation(); set(false); b.focus() } }, true)
+}
+
 export function toast(text) { const t = $('#toast'); t.textContent = text; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true }, 2000) }
 export async function copyText(text, done = 'Copied') { try { await navigator.clipboard.writeText(text); toast(done) } catch { toast('Copying is not available here; select the text instead') } }
 
@@ -52,7 +62,7 @@ export function citeDialog(get) {
   tabsEl.innerHTML = Object.entries(FORMATS).map(([k, f]) => `<button type="button" data-fmt="${k}">${f.label}</button>`).join('')
   const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
   const draw = () => {
-    const f = FORMATS[fmt], text = f.make(get()); dlg.dataset.text = unlit(text.replace(/\*/g, f.html ? '' : '*'))
+    const c = get(), f = FORMATS[fmt], text = f.make(c); dlg.querySelector('h2').textContent = c.whole ? 'Cite this app' : 'Cite these results'; dlg.dataset.text = unlit(text.replace(/\*/g, f.html ? '' : '*'))
     body.innerHTML = f.html ? unlit(esc(text).replace(/\*([^*]+)\*/g, '<i>$1</i>')) : `<pre>${esc(text)}</pre>`
     tabsEl.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.fmt === fmt))
   }
