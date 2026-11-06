@@ -6,7 +6,7 @@
 import { createServer } from 'node:http'
 import { createReadStream, statSync, existsSync } from 'node:fs'
 import { join, extname, normalize, resolve } from 'node:path'
-const [port = '8001', ngr = 'app-v1', cls = 'classifier_app-v1', data = 'data_repos/ngramreader-data-2023.1.8-derived', host = '127.0.0.1'] = process.argv.slice(2)   // host 0.0.0.0: reachable on the local network
+const [port = '8001', ngr = 'apps/ngramreader', cls = 'apps/classifier', data = 'data/ngramreader-data-2023.1.8-derived', host = '127.0.0.1'] = process.argv.slice(2)   // host 0.0.0.0: reachable on the local network
 const ROOTS = { ngramreader: resolve(ngr), classifier: resolve(cls), data: resolve(data) }
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.tsv': 'text/tab-separated-values; charset=utf-8', '.json': 'application/json', '.parquet': 'application/octet-stream' }
 createServer((req, res) => {

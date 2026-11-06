@@ -21,7 +21,7 @@ This version runs entirely in the browser. It is plain HTML, CSS and JavaScript 
 
 - **Release:** **OpenITI 2023.1.8**.
 - **Data repository:** [`maximromanov/ngramreader-data-2023.1.8`](https://github.com/maximromanov/ngramreader-data-2023.1.8), read through `raw.githubusercontent.com`. The data is the R app's Parquet data, unchanged, plus a few derived files.
-- **Pinned commit:** the app reads one commit of the data repository: **`8c89e50e2a646530f05c33a12055268e864d75d0`** (adds `labels/` and `classifier/`; earlier links that carry commit `846e5f9` still work, with URIs in place of labels).
+- **Pinned commit:** the app reads the one commit of the data repository: **`7b082fba49e1d1f1ce0cf115adb657208bb4dfa1`**, set in `js/config.js`.
 - **Configuration:** the release, the data repository and the pinned commit are set in one place, `js/config.js` (`RELEASES`, `DEFAULT_RELEASE`). To switch to another release, add its entry there and point `DEFAULT_RELEASE` to it. A later release lives in its own repository, `ngramreader-data-<release>`.
 - **Readable labels:** the books and authors tables show a readable title or author name and the Arabic beside the URI, from `labels/book_labels.tsv` and `labels/author_labels.tsv` in the data repository (shared with the Book Classifier). They are working labels, generated with a language model, and may contain errors; the URI is authoritative. Uncertain labels carry a raised "?". Downloads add the columns `Book`/`Author`, `Arabic` and, for books, `labelUncertain`. The book titles and author names link to their profiles in the [OpenITI Book Classifier](https://maximromanov.github.io/classifier/) (new tab).
 - **Where it is shown:** the version line at the bottom of the page shows the app commit, the release and the data commit. So does the `README.txt` inside every download.
@@ -116,7 +116,7 @@ Run both apps and the local data copy from one server (Node, nothing to install;
 
 ```
 cd /Users/romanov/MGR_PROJECTS/research/OPENITI_NGRAMREADER_2026
-node app-v1/tools/dev_server.mjs 8001 app-v1 classifier_app-v1 data_repos/ngramreader-data-2023.1.8-derived
+node apps/ngramreader/tools/dev_server.mjs 8001
 ```
 
 Then open http://localhost:8001/ngramreader/. The git-ignored `js/config.local.js` points the app at the local data; it is loaded only on localhost, and without it the app reads the pinned commit from GitHub:
