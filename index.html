@@ -2,6 +2,7 @@
 <html lang="en" data-app="ngramreader">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OpenITI NgramReader</title>
 <meta name="description" content="Chronological frequencies of words and phrases in the OpenITI corpus of premodern Arabic texts (release 2023.1.8), in the browser.">
@@ -24,12 +25,13 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&display=swap">
+<script>try{var t=localStorage.getItem('openiti-theme');document.documentElement.dataset.theme=t||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}catch(e){}</script>
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 <header class="site">
   <div class="brand"><a class="name" href="./"><img class="band-mark" src="brand/mark-ngramreader.svg" alt=""><span class="band-title"><span class="band-full">OpenITI </span>NgramReader</span><span class="sub">DHFAIS App{endix} 1</span></a></div>
-  <nav id="band-nav" aria-label="Site"><a id="link-other" href="https://maximromanov.github.io/classifier/" target="_blank" rel="noopener">Book Classifier</a><a href="https://brill.com/display/title/74416" target="_blank" rel="noopener">The book</a><a href="#" id="open-help">Help</a><button type="button" id="band-cite" class="band-link">Cite</button></nav>
+  <nav id="band-nav" aria-label="Site"><a id="link-other" href="https://maximromanov.github.io/classifier/" target="_blank" rel="noopener">Book Classifier</a><a href="https://brill.com/display/title/74416" target="_blank" rel="noopener">The book</a><a href="#" id="open-help">Help</a><button type="button" id="band-cite" class="band-link">Cite</button><div class="seg theme-sw in-menu" role="group" aria-label="Color mode"><button type="button" data-v="auto">Auto</button><button type="button" data-v="light">Light</button><button type="button" data-v="dark">Dark</button></div></nav>
   <button type="button" id="band-menu" class="band-menu" aria-label="Menu" aria-expanded="false" aria-controls="band-nav"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false"><path d="M3 6 H21 M3 12 H21 M3 18 H21" stroke="#fff" stroke-width="2.6" fill="none"/></svg></button>
   <svg class="band-rule" viewBox="0 0 1000 14" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M0 10 C210 10 300 0 490 0 S790 10 1000 10 V14 H0 Z" fill="#9dbee0"/></svg>
 </header>
@@ -53,7 +55,7 @@
 <div id="content">
   <div id="topbar">
     <div id="chips"><span class="note">No search yet.</span></div>
-    <div class="actions"><span class="fontsize" role="group" aria-label="Text size"><button type="button" id="font-minus" title="Smaller text" aria-label="Smaller text">−</button><button type="button" id="font-plus" title="Larger text" aria-label="Larger text">+</button></span><button type="button" id="cite" disabled>Cite these results</button><button type="button" id="copy-link" disabled>Copy link</button><button type="button" id="download-all" disabled>Download all (zip)</button></div>
+    <div class="actions"><div class="seg theme-sw in-row" role="group" aria-label="Color mode"><button type="button" data-v="auto">Auto</button><button type="button" data-v="light">Light</button><button type="button" data-v="dark">Dark</button></div><span class="fontsize" role="group" aria-label="Text size"><button type="button" id="font-minus" title="Smaller text" aria-label="Smaller text">−</button><button type="button" id="font-plus" title="Larger text" aria-label="Larger text">+</button></span><button type="button" id="cite" disabled>Cite these results</button><button type="button" id="copy-link" disabled>Copy link</button><button type="button" id="download-all" disabled>Download all (zip)</button></div>
   </div>
   <div id="tabs" role="tablist" aria-label="Views"></div>
   <div id="messages" role="alert"></div>

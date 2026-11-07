@@ -112,7 +112,7 @@ Tours are data: `tours/tours.json`. Editing or adding a tour needs no change to 
 
 ## Changes
 
-- **2.1:** branded header band, icons, install as a web app (manifest; no service worker). Links of the first forms open with the corpus bars on, as they did.
+- **2.1:** branded header band, icons, install as a web app (manifest; no service worker); dark mode (Auto, Light, Dark; exports always light). Links of the first forms open with the corpus bars on, as they did.
 - **2.0:** redesign, guided tours, DHFAIS name and citations, one-commit data repository.
 
 ## Development

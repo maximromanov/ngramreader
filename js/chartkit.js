@@ -92,16 +92,39 @@ export const setFontDelta = d => { fontDelta = d }
 
 const config = { responsive: false, displaylogo: false, modeBarButtonsToRemove: ['toImage', 'lasso2d', 'select2d'] }
 
+// dark mode, on screen only: a recoloured copy goes to Plotly; el._kit keeps the original, so exports always stay light
+const DARK = { '#ffffff': '#16191d', '#1b1b1b': '#e8e8e8', '#5a5a5a': '#b0b4ba', '#e6e6e6': '#33383f', '#9a9a9a': '#6f7680', black: '#e8e8e8', '#999': '#6f7680', '#d6d6d6': '#3c424a', '#8a8a8a': '#9aa0a8', '#123c63': '#cfe6fa',
+  '#1f5f99': '#6fb1ea', '#b8560f': '#f0a05a', '#00806a': '#3fcfb0', '#8a3f87': '#d08fcc', '#a58a00': '#e0c440', '#3f93c9': '#8cc8ee', '#c0392b': '#f08a7c', '#333333': '#d0d0d0' }
+const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(',')
+const DARK_RGB = new Map([...STYLES.map(s => [s.rgb, hex2rgb(DARK[s.color])]), ['0,0,0', '255,255,255'], ['200,200,200', '120,120,120']])
+const liftCorpus = (k, a) => (k === '0,0,0' && Number(a) < 0.1 ? '0.16' : a)      // the corpus bars would vanish on a dark ground
+const darkColor = s => { if (DARK[s]) return DARK[s]; const m = /^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/.exec(s); if (!m || m[4] === '0') return s; const k = `${m[1]},${m[2]},${m[3]}`; return DARK_RGB.has(k) ? `rgba(${DARK_RGB.get(k)},${liftCorpus(k, m[4])})` : s }
+const SKIP = new Set(['x', 'y', 'z', 'customdata', 'r', 'theta', 'tickvals'])
+const themed = (o, key) => { if (typeof o === 'string') return darkColor(o).replace(/color:(#[0-9a-f]{6})/g, (m, c) => `color:${DARK[c] ?? c}`)
+  if (Array.isArray(o)) return SKIP.has(key) ? o : o.map(x => themed(x, key))
+  if (o && typeof o === 'object') return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, SKIP.has(k) ? v : themed(v, k)]))
+  return o }
+const isDark = () => document.documentElement.dataset.theme === 'dark'
+// light bars (faint: per-bar opacity): on a dark ground transparency would read as darker, so they become a pale tint of the colour
+const pale = c => { const h = c.startsWith('#') ? c : null; if (!h) return c; const v = hex2rgb(h).split(',').map(x => Math.round(Number(x) + (255 - Number(x)) * 0.72)); return `rgb(${v.join(',')})` }
+const darkTraces = ts => themed(ts).map((t, i) => { const op = ts[i].marker?.opacity; if (!Array.isArray(op)) return t
+  const m = t.marker, per = c => op.map(o => (o < 1 ? pale(/^#/.test(c) ? c : m.line.color) : c)), { opacity, ...rest } = m
+  return { ...t, marker: { ...rest, color: per(m.color), ...(m.pattern ? { pattern: { ...m.pattern, bgcolor: op.map(o => (o < 1 ? pale(m.line.color) : m.pattern.bgcolor)), fgcolor: op.map(o => (o < 1 ? pale(m.line.color) : m.pattern.fgcolor)) } } : {}) } } })
+const darkLayout = L => { const o = themed(L); o.hoverlabel = { bgcolor: '#262b32', bordercolor: '#6f7680', font: { color: '#e8e8e8' } }
+  if (o.polar) { const a = { gridcolor: '#454b53', linecolor: '#6f7680', tickcolor: '#6f7680' }; o.polar = { ...o.polar, bgcolor: '#16191d', radialaxis: { ...o.polar.radialaxis, ...a }, angularaxis: { ...o.polar.angularaxis, ...a } } }
+  return o }
+
 // draw traces with layout and caption into el and remember them for exports
 export async function plot(el, traces, layout, caption, filename) {
   const Plotly = await loadPlotly()
   el._kit = { traces, layout, caption, filename }
   const width = el.clientWidth || 800, fixed = figureHeight(layout, caption, width, 1, fontDelta), height = fixed ?? layout.height ?? (el.clientHeight || 500)
   if (fixed) el.style.height = `${fixed}px`
-  await Plotly.react(el, traces, { ...styled({ ...layout, height }, caption, { width, d: fontDelta }), width, height }, { ...config, displayModeBar: narrow() ? false : 'hover' })   // on phones the toolbar would lie over the title
+  const L = { ...styled({ ...layout, height }, caption, { width, d: fontDelta }), width, height }
+  await Plotly.react(el, isDark() ? darkTraces(traces) : traces, isDark() ? darkLayout(L) : L, { ...config, displayModeBar: narrow() ? false : 'hover' })   // on phones the toolbar would lie over the title
 }
 export async function redraw(el) { if (el?._kit) { const { traces, layout, caption, filename } = el._kit; await plot(el, traces, layout, caption, filename) } }
-export async function setShapes(el, shapes) { const Plotly = await loadPlotly(); el._kit.layout = { ...el._kit.layout, shapes }; await Plotly.relayout(el, { shapes }) }
+export async function setShapes(el, shapes) { const Plotly = await loadPlotly(); el._kit.layout = { ...el._kit.layout, shapes }; await Plotly.relayout(el, { shapes: isDark() ? themed(shapes) : shapes }) }
 
 // an image of the chart at a preset: the caption is laid out again and all text scaled for that size
 export async function chartImage(el, format, presetName) {

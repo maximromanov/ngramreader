@@ -5,7 +5,7 @@ import { readByIds, loadStatic, loadLabels } from './data.js'
 import { prepare, compute, relative, PERIODS_PLOT, CENTURIES, compsCompared } from './compute.js'
 import { overTimeTogether, overTimeSeparate, radarChart, typesOverTimeChart } from './charts.js'
 import { redraw, exportBar, styleOf, arabic, typeBars, narrow, byType, setTypeCodes, typeLabel } from './chartkit.js'
-import { panel, tabs, dialogs, citeDialog, copyText, fontControls, bandMenu } from './ui.js'
+import { panel, tabs, dialogs, citeDialog, copyText, fontControls, bandMenu, themeControl } from './ui.js'
 import { translitInput } from './translit.js'
 import { createTours, tourQuery, cleanLink } from './tour.js'
 import { packState, unpackState } from './share.js'
@@ -459,6 +459,7 @@ async function init() {
   $('#download-all').onclick = downloadAll
   new ResizeObserver(onResize).observe($('#content'))
   fontControls(() => activeCharts().forEach(el => redraw(el)))
+  themeControl(() => activeCharts().forEach(el => redraw(el)))
   versionLine()
   $('#help-howto').innerHTML = $('#howto').innerHTML
   const tq = new URLSearchParams(location.search)

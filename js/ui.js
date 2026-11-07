@@ -33,6 +33,16 @@ export function tabs(host, list, onChange) {
 }
 
 // text size: - and + next to Help, 0.5 pt per step (0.5 pt = 2/3 px), remembered in this browser
+// Auto, Light or Dark: kept in this browser, never in a link; the head of index.html sets it before the first paint
+export function themeControl(onChange) {
+  const root = document.documentElement, system = matchMedia('(prefers-color-scheme: dark)'), boxes = document.querySelectorAll('.theme-sw')
+  let choice = 'auto'; try { choice = localStorage.getItem('openiti-theme') || 'auto' } catch {}
+  const apply = () => { const t = choice === 'auto' ? (system.matches ? 'dark' : 'light') : choice, changed = root.dataset.theme !== t; root.dataset.theme = t
+    boxes.forEach(box => box.querySelectorAll('button').forEach(b => { const on = b.dataset.v === choice; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on) })); if (changed) onChange() }
+  boxes.forEach(box => { box.onclick = e => { const b = e.target.closest('button'); if (!b) return; choice = b.dataset.v; try { if (choice === 'auto') localStorage.removeItem('openiti-theme'); else localStorage.setItem('openiti-theme', choice) } catch {} apply() } })
+  system.addEventListener('change', apply); apply()
+}
+
 export function fontControls(onChange) {
   let step = 0; try { step = Number(localStorage.getItem('openiti-font-step')) || 0 } catch {}
   const apply = () => { const px = step * 2 / 3; document.documentElement.style.setProperty('--fd', `${px}px`); setFontDelta(px); try { localStorage.setItem('openiti-font-step', step) } catch {} }
@@ -45,7 +55,7 @@ export function bandMenu() {
   const b = $('#band-menu'), nav = $('#band-nav'), open = () => nav.classList.contains('open')
   const set = on => { nav.classList.toggle('open', on); b.setAttribute('aria-expanded', on); if (on) nav.querySelector('a, button').focus() }
   b.onclick = () => set(!open())
-  nav.addEventListener('click', e => { if (e.target.closest('a, button')) set(false) })
+  nav.addEventListener('click', e => { if (e.target.closest('a, button') && !e.target.closest('.theme-sw')) set(false) })
   document.addEventListener('click', e => { if (open() && !e.target.closest('#band-nav, #band-menu')) set(false) })
   addEventListener('keydown', e => { if (e.key === 'Escape' && open()) { e.stopImmediatePropagation(); set(false); b.focus() } }, true)
 }
