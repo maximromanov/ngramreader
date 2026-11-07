@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 type: software
 title: "DHFAIS App{endix} 1: OpenITI NgramReader, Version 2 (based on OpenITI, Release ver. 2023.1.8)"
-version: "2.1"
+version: "2.01"
 date-released: 2026-11-05
 doi: 10.5281/zenodo.23985408
 authors:

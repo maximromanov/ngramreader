@@ -18,7 +18,7 @@ export const DEV = /^(localhost|127\.0\.0\.1|192\.168\.|10\.|172\.(1[6-9]|2\d|3[
 
 export const APP = {
   name: 'OpenITI NgramReader',
-  version: '2.1',
+  version: '2.01',
   repo: 'maximromanov/ngramreader',
   classifier: 'https://maximromanov.github.io/classifier/',   // book and author profiles (Book Classifier), linked from the tables
 }
